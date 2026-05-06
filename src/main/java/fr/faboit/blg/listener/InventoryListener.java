@@ -46,9 +46,9 @@ public final class InventoryListener implements Listener {
         // Always cancel clicks inside our dialogs to prevent item theft
         event.setCancelled(true);
 
-        // Ignore clicks outside the top inventory
+        // Ignore clicks outside the top inventory (e.g. player's own hotbar)
         if (event.getClickedInventory() == null
-                || !event.getClickedInventory().equals(inv)) return;
+                || event.getClickedInventory() != inv) return;
 
         int slot = event.getSlot();
         PlayerDialogState state = dm.getState(player);

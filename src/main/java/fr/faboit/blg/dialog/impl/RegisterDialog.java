@@ -156,8 +156,10 @@ public final class RegisterDialog {
         int slot = sec.getInt("slot", 13);
         if (slot < 0 || slot >= inv.getSize()) return;
 
+        // Player heads require skull meta with a skin texture; since BLG does not
+        // depend on any skin library, we fall back to PAPER which renders cleanly
+        // and avoids a NullPointerException on ItemMeta cast.
         Material mat = parseMat(sec.getString("material", "PAPER"));
-        // Player heads require special handling; fall back to PAPER if not available
         if (mat == Material.PLAYER_HEAD) mat = Material.PAPER;
 
         inv.setItem(slot, GUIBuilder.fromSection(sec, Map.of("{player}", player.getName())));

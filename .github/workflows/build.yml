@@ -9,10 +9,15 @@ on:
     types: [ created ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build Plugin
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed for release asset upload
 
     steps:
       - name: Checkout repository

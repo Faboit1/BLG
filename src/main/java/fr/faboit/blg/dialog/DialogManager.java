@@ -6,6 +6,7 @@ import fr.faboit.blg.dialog.impl.ConfirmDialog;
 import fr.faboit.blg.dialog.impl.ErrorDialog;
 import fr.faboit.blg.dialog.impl.LoginDialog;
 import fr.faboit.blg.dialog.impl.RegisterDialog;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -85,10 +86,10 @@ public final class DialogManager {
 
     /** Close all open dialogs (used on plugin disable). */
     public void closeAllDialogs() {
-        // Iterate over a copy to avoid ConcurrentModificationException
-        new HashMap<>(trackedInventories).forEach((uuid, inv) -> {
-            if (inv != null) inv.close();
-        });
+        // Close inventories for all online players that have dialogs open
+        Bukkit.getOnlinePlayers().stream()
+                .filter(p -> trackedInventories.containsKey(p.getUniqueId()))
+                .forEach(Player::closeInventory);
         states.values().forEach(PlayerDialogState::clearCredentials);
         states.clear();
         trackedInventories.clear();

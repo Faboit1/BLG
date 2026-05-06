@@ -1,7 +1,6 @@
 package fr.faboit.blg.command;
 
 import fr.faboit.blg.BLGPlugin;
-import fr.faboit.blg.util.GUIBuilder;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
