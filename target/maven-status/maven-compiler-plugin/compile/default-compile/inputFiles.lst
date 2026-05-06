@@ -1,0 +1,10 @@
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/BLGPlugin.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/auth/AuthMeHook.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/OpenAutoCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/OpenLoginCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/OpenRegisterCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/LoginSubmitCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/RegisterSubmitCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/dialog/DialogManager.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/listener/DialogResponseListener.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/listener/PlayerJoinListener.java
