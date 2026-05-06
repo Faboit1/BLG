@@ -1,7 +1,0 @@
-target/
-*.class
-*.iml
-.idea/
-.vscode/
-*.log
-dependency-reduced-pom.xml
