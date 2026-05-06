@@ -40,6 +40,9 @@ import java.util.logging.Level;
  */
 public class DialogManager {
 
+    private static final int SUBMIT_BUTTON_WIDTH = 200;
+    private static final int CANCEL_BUTTON_WIDTH = 100;
+
     private final BLGPlugin plugin;
 
     /** Whether the Paper Dialog API is available on this server build. */
@@ -85,12 +88,12 @@ public class DialogManager {
                         .type(DialogType.multiAction(List.of(
                                         ActionButton.create(
                                                 Component.text(stripColor(button)),
-                                                null, 200,
+                                                null, SUBMIT_BUTTON_WIDTH,
                                                 DialogAction.commandTemplate(
                                                         "/blg_login_submit $(password)"))))
                                 .exitAction(ActionButton.create(
                                         Component.text(stripColor(cancel)),
-                                        null, 100, null))
+                                        null, CANCEL_BUTTON_WIDTH, null))
                                 .build()));
                 player.showDialog(dialog);
             } catch (Exception e) {
@@ -141,12 +144,12 @@ public class DialogManager {
                         .type(DialogType.multiAction(List.of(
                                         ActionButton.create(
                                                 Component.text(stripColor(button)),
-                                                null, 200,
+                                                null, SUBMIT_BUTTON_WIDTH,
                                                 DialogAction.commandTemplate(
                                                         "/blg_register_submit $(password) $(confirmPassword)"))))
                                 .exitAction(ActionButton.create(
                                         Component.text(stripColor(cancel)),
-                                        null, 100, null))
+                                        null, CANCEL_BUTTON_WIDTH, null))
                                 .build()));
                 player.showDialog(dialog);
             } catch (Exception e) {
