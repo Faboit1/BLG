@@ -7,7 +7,7 @@
 
     <groupId>fr.faboit</groupId>
     <artifactId>BLG</artifactId>
-    <version>1.0.0</version>
+    <version>26.1.2</version>
     <packaging>jar</packaging>
 
     <name>BetterLoginGui</name>
