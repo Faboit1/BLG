@@ -1,0 +1,45 @@
+# BetterLoginGui configuration
+
+messages:
+  # Prefix for all plugin messages
+  prefix: "&8[&bBLG&8] &r"
+
+  # Shown to the player before opening a dialog (dialogs require a screen interaction first)
+  login-prompt: "&7Please enter your credentials in the dialog."
+  register-prompt: "&7Please fill in the registration dialog."
+  auto-prompt: "&7Opening the appropriate dialog for you..."
+
+  # Shown when AuthMe is not available and /openauto is used
+  authme-unavailable: "&cAuthMe integration is unavailable. Using login dialog by default."
+
+  # Shown if an internal command is called outside of a dialog context
+  internal-command-blocked: "&cThis command can only be used through the login/register dialog."
+
+  # Shown when an internal submit command fires correctly
+  login-forwarded: "&aForwarding your login to AuthMe..."
+  register-forwarded: "&aForwarding your registration to AuthMe..."
+
+  # Shown when register passwords do not match
+  password-mismatch: "&cPasswords do not match. Please try again."
+
+# Automatically open the login/register dialog when a player joins.
+# Requires AuthMe to be installed for the correct dialog to be chosen.
+auto-open-on-join: false
+
+dialog:
+  # Title text for each dialog (supports legacy color codes via &)
+  login-title: "&lLogin"
+  register-title: "&lRegister"
+
+  # Body text displayed inside each dialog
+  login-body: "Enter your password to log in to the server."
+  register-body: "Choose a password to create your account.\nEnter the same password twice to confirm."
+
+  # Button labels
+  login-button: "Login"
+  register-button: "Register"
+  cancel-button: "Cancel"
+
+  # Input field labels
+  password-label: "Password"
+  confirm-password-label: "Confirm Password"

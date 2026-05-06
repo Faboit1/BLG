@@ -1,0 +1,56 @@
+name: BetterLoginGui
+version: '${project.version}'
+main: io.github.faboit1.blg.BLGPlugin
+api-version: '1.21'
+description: Modern dialog-based login/register UI layer over AuthMe.
+authors:
+  - Faboit1
+
+softdepend:
+  - AuthMe
+
+commands:
+  openlogin:
+    description: Opens the login dialog.
+    usage: /openlogin
+    permission: blg.openlogin
+  openregister:
+    description: Opens the register dialog.
+    usage: /openregister
+    permission: blg.openregister
+  openauto:
+    description: Automatically opens login or register dialog based on AuthMe registration status.
+    usage: /openauto
+    permission: blg.openauto
+
+  # Internal commands used by dialog submit buttons – not for direct player use.
+  blg_login_submit:
+    description: Internal – called by the login dialog submit button.
+    usage: /blg_login_submit <password>
+    permission: blg.internal
+  blg_register_submit:
+    description: Internal – called by the register dialog submit button.
+    usage: /blg_register_submit <password> <confirmPassword>
+    permission: blg.internal
+
+permissions:
+  blg.openlogin:
+    description: Allows using /openlogin.
+    default: true
+  blg.openregister:
+    description: Allows using /openregister.
+    default: true
+  blg.openauto:
+    description: Allows using /openauto.
+    default: true
+  blg.internal:
+    description: Internal permission for dialog submit commands.
+    default: true
+  blg.admin:
+    description: Full administrative access.
+    default: op
+    children:
+      blg.openlogin: true
+      blg.openregister: true
+      blg.openauto: true
+      blg.internal: true

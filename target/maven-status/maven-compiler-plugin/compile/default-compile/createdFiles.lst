@@ -1,0 +1,11 @@
+io/github/faboit1/blg/command/OpenLoginCommand.class
+io/github/faboit1/blg/listener/PlayerJoinListener.class
+io/github/faboit1/blg/command/internal/LoginSubmitCommand.class
+io/github/faboit1/blg/listener/DialogResponseListener.class
+io/github/faboit1/blg/auth/AuthMeHook.class
+io/github/faboit1/blg/dialog/DialogManager$TextBoxInput.class
+io/github/faboit1/blg/command/OpenAutoCommand.class
+io/github/faboit1/blg/BLGPlugin.class
+io/github/faboit1/blg/command/OpenRegisterCommand.class
+io/github/faboit1/blg/command/internal/RegisterSubmitCommand.class
+io/github/faboit1/blg/dialog/DialogManager.class
