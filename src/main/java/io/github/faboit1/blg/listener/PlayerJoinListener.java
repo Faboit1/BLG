@@ -37,10 +37,13 @@ public class PlayerJoinListener implements Listener {
             if (!player.isOnline()) {
                 return;
             }
-            if (plugin.getAuthMeHook().isRegistered(player)) {
-                plugin.getDialogManager().openLoginDialog(player);
-            } else {
+            // When AuthMe is not hooked, default to the login dialog so
+            // returning players are not incorrectly shown the register form.
+            if (plugin.getAuthMeHook().isHooked()
+                    && !plugin.getAuthMeHook().isRegistered(player)) {
                 plugin.getDialogManager().openRegisterDialog(player);
+            } else {
+                plugin.getDialogManager().openLoginDialog(player);
             }
         }, 1L);
     }

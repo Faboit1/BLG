@@ -42,11 +42,11 @@ public class LoginSubmitCommand implements CommandExecutor {
             return true;
         }
 
-        // Forward the credential to AuthMe.
-        // The password is in args[0]; it may contain special characters so
-        // we use performCommand rather than dispatchCommand to let it run in
-        // the player's context exactly as if they typed /login <password>.
-        String password = args[0];
+        // Reconstruct the full password from all args.  The dialog command
+        // template substitutes %password% verbatim; if the player's password
+        // contains spaces the client sends them as separate args.  Joining
+        // restores the original value.
+        String password = String.join(" ", args);
         player.sendMessage(plugin.msg("login-forwarded"));
         player.performCommand("login " + password);
 

@@ -37,6 +37,15 @@ public class AuthMeHook {
     // -------------------------------------------------------------------------
 
     /**
+     * Returns the raw {@link AuthMeApi} instance, or {@code null} if AuthMe
+     * is not hooked.  Prefer calling the higher-level methods on this class
+     * instead of using the API directly.
+     */
+    public AuthMeApi getAuthMeApi() {
+        return authMeApi;
+    }
+
+    /**
      * Returns {@code true} if the given player has a registered account in
      * AuthMe.
      *
