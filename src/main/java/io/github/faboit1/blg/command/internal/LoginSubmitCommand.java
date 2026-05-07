@@ -19,9 +19,13 @@ import org.bukkit.entity.Player;
  * sends the resulting command to the server.
  *
  * <p>The command forwards the credential to AuthMe by dispatching
- * {@code /login <password>}.  BLG itself never reads or stores the password.
+ * {@code /login <password>}. If the player is still unauthenticated a moment
+ * later, BLG re-opens the login dialog with a best-effort error message.
  */
 public class LoginSubmitCommand implements CommandExecutor {
+
+    /** Wait 2 ticks (~100 ms) so AuthMe can finish processing before we retry the dialog. */
+    private static final long RETRY_DELAY_TICKS = 2L;
 
     private final BLGPlugin plugin;
 
@@ -42,13 +46,21 @@ public class LoginSubmitCommand implements CommandExecutor {
             return true;
         }
 
-        // Reconstruct the full password from all args.  The dialog command
-        // template substitutes $(password) verbatim; if the player's password
-        // contains spaces the client sends them as separate args.  Joining
-        // restores the original value.
         String password = String.join(" ", args);
-        player.sendMessage(plugin.msg("login-forwarded"));
+        String failureMessage = plugin.msg("login-failed");
+
         player.performCommand("login " + password);
+        String finalFailureMessage = failureMessage;
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline()) {
+                return;
+            }
+            if (plugin.getAuthMeHook().isHooked() && plugin.getAuthMeHook().isAuthenticated(player)) {
+                plugin.getFlowManager().clearPlayer(player);
+                return;
+            }
+            plugin.getDialogManager().openLoginDialog(player, finalFailureMessage);
+        }, RETRY_DELAY_TICKS);
 
         return true;
     }

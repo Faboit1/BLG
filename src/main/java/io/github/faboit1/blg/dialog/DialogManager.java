@@ -85,8 +85,12 @@ public class DialogManager {
      * <pre>/blg_login_submit $(password)</pre>
      */
     public void openLoginDialog(Player player) {
+        openLoginDialog(player, null);
+    }
+
+    public void openLoginDialog(Player player, String errorMessage) {
         String title   = plugin.cfg("dialog.login-title");
-        String body    = plugin.cfg("dialog.login-body");
+        String body    = withError(plugin.cfg("dialog.login-body"), errorMessage);
         String button  = plugin.cfg("dialog.login-button");
         String cancel  = plugin.cfg("dialog.cancel-button");
         String pwLabel = plugin.cfg("dialog.password-label");
@@ -105,9 +109,15 @@ public class DialogManager {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to open login dialog for " + player.getName()
                         + ": " + e.getMessage(), e);
+                if (errorMessage != null && !errorMessage.isBlank()) {
+                    player.sendMessage(errorMessage);
+                }
                 fallbackChat(player, "login-prompt");
             }
         } else {
+            if (errorMessage != null && !errorMessage.isBlank()) {
+                player.sendMessage(errorMessage);
+            }
             fallbackChat(player, "login-prompt");
         }
     }
@@ -119,8 +129,12 @@ public class DialogManager {
      * <pre>/blg_register_submit $(password) $(confirmPassword)</pre>
      */
     public void openRegisterDialog(Player player) {
+        openRegisterDialog(player, null);
+    }
+
+    public void openRegisterDialog(Player player, String errorMessage) {
         String title        = plugin.cfg("dialog.register-title");
-        String body         = plugin.cfg("dialog.register-body");
+        String body         = withError(plugin.cfg("dialog.register-body"), errorMessage);
         String button       = plugin.cfg("dialog.register-button");
         String cancel       = plugin.cfg("dialog.cancel-button");
         String pwLabel      = plugin.cfg("dialog.password-label");
@@ -140,9 +154,15 @@ public class DialogManager {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to open register dialog for " + player.getName()
                         + ": " + e.getMessage(), e);
+                if (errorMessage != null && !errorMessage.isBlank()) {
+                    player.sendMessage(errorMessage);
+                }
                 fallbackChat(player, "register-prompt");
             }
         } else {
+            if (errorMessage != null && !errorMessage.isBlank()) {
+                player.sendMessage(errorMessage);
+            }
             fallbackChat(player, "register-prompt");
         }
     }
@@ -369,7 +389,7 @@ public class DialogManager {
             String label = btn.length > 0 ? btn[0] : "";
             String cmd   = btn.length > 1 ? btn[1] : null;
             Object action = cmd != null
-                    ? dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, cmd)
+                    ? buildClickAction(dialogActionClass, cmd)
                     : null;
             Object button = actionButtonClass
                     .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
@@ -384,7 +404,7 @@ public class DialogManager {
 
         if (exitButtonLabel != null) {
             Object exitAction = exitButtonCmd != null
-                    ? dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, exitButtonCmd)
+                    ? buildClickAction(dialogActionClass, exitButtonCmd)
                     : null;
             Object exitBtn = actionButtonClass
                     .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
@@ -558,6 +578,42 @@ public class DialogManager {
         return obj.getClass().getMethod(method, paramType).invoke(obj, arg);
     }
 
+    /**
+     * Builds a {@code DialogAction} for a plain button click that runs {@code cmd}.
+     *
+     * <p>Prefers {@code DialogAction.staticAction(ClickEvent.runCommand(cmd))} when
+     * available (Paper 1.21.6+) because {@code staticAction} fires only when the
+     * player explicitly clicks the button.  On older builds (1.21.5) only
+     * {@code commandTemplate} exists; it is used as a fallback and works in the
+     * same way for button clicks that carry no form-input substitutions.
+     *
+     * @param dialogActionClass the {@code DialogAction} class loaded via reflection
+     * @param cmd               the command to run, including the leading {@code /}
+     * @return the created {@code DialogAction} instance
+     */
+    private Object buildClickAction(Class<?> dialogActionClass, String cmd)
+            throws Exception {
+        // Preferred: staticAction(ClickEvent.runCommand(cmd)) – fires on explicit click only
+        try {
+            Class<?> clickEventClass = Class.forName("net.kyori.adventure.text.event.ClickEvent");
+            Object clickEvent = clickEventClass
+                    .getMethod("runCommand", String.class)
+                    .invoke(null, cmd);
+            return dialogActionClass
+                    .getMethod("staticAction", clickEventClass)
+                    .invoke(null, clickEvent);
+        } catch (NoSuchMethodException e) {
+            // staticAction not available on this Paper build – fall back to commandTemplate
+            plugin.getLogger().log(Level.FINE,
+                    "DialogAction.staticAction not found; falling back to commandTemplate for button: " + cmd);
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.FINE,
+                    "Failed to build staticAction for button '" + cmd + "'; falling back to commandTemplate: "
+                    + e.getMessage());
+        }
+        return dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, cmd);
+    }
+
     private Object applyPasswordMasking(Object inputBuilder) {
         for (String method : PASSWORD_MASKING_METHODS) {
             Object updated = callIfPresent(inputBuilder, method, true);
@@ -626,6 +682,16 @@ public class DialogManager {
     /** Sends a friendly chat message when dialogs are unavailable. */
     private void fallbackChat(Player player, String messageKey) {
         player.sendMessage(plugin.msg(messageKey));
+    }
+
+    private String withError(String body, String errorMessage) {
+        if (errorMessage == null || errorMessage.isBlank()) {
+            return body;
+        }
+        if (body == null || body.isBlank()) {
+            return errorMessage;
+        }
+        return errorMessage + "\n\n" + body;
     }
 
     /**

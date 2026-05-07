@@ -22,9 +22,17 @@ commands:
     description: Opens the correct dialog for yourself, or forces the login dialog for a target player.
     usage: /openauto [player]
     permission: blg.openauto
+  openprelogin:
+    description: Opens the pre-login choice dialog (one-click login/register) for yourself or a target player.
+    usage: /openprelogin [player]
+    permission: blg.openprelogin
   updaterules:
     description: Reloads rules.txt, backs up the old version, and invalidates cached acceptances if changed.
     usage: /updaterules
+    permission: blg.admin
+  blgreload:
+    description: Reloads config.yml and rules.txt without restarting the server.
+    usage: /blgreload
     permission: blg.admin
 
   # Internal commands used by dialog submit/navigation buttons – not for direct player use.
@@ -71,6 +79,12 @@ permissions:
   blg.openauto:
     description: Allows using /openauto.
     default: true
+  blg.openprelogin:
+    description: Allows using /openprelogin.
+    default: true
+  blg.openprelogin.others:
+    description: Allows opening the pre-login dialog for other players with /openprelogin <player>.
+    default: op
   blg.openauto.others:
     description: Allows forcing the login dialog open for other players with /openauto <player>.
     default: op
@@ -84,5 +98,7 @@ permissions:
       blg.openlogin: true
       blg.openregister: true
       blg.openauto: true
+      blg.openprelogin: true
+      blg.openprelogin.others: true
       blg.openauto.others: true
       blg.internal: true

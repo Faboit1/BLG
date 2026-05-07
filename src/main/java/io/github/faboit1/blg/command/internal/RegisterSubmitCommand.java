@@ -19,10 +19,14 @@ import org.bukkit.entity.Player;
  * server.
  *
  * <p>BLG validates that both fields match and then forwards the credential to
- * AuthMe via {@code /register <password> <confirmPassword>}.  BLG never
- * stores or hashes the password itself.
+ * AuthMe via {@code /register <password> <confirmPassword>}. If AuthMe still
+ * has not registered/authenticated the player a moment later, BLG re-opens
+ * the register dialog with a best-effort error message.
  */
 public class RegisterSubmitCommand implements CommandExecutor {
+
+    /** Wait 2 ticks (~100 ms) so AuthMe can finish processing before we retry the dialog. */
+    private static final long RETRY_DELAY_TICKS = 2L;
 
     private final BLGPlugin plugin;
 
@@ -43,18 +47,6 @@ public class RegisterSubmitCommand implements CommandExecutor {
             return true;
         }
 
-        // The dialog command template is:
-        //   /blg_register_submit %password% %confirmPassword%
-        // Each input's value is substituted verbatim.  If either field
-        // contains spaces the args array will have more than 2 elements; we
-        // cannot reliably split them when both fields may have spaces.
-        //
-        // Strategy:
-        //   • When AuthMe API is available, use forceRegister(player, password)
-        //     directly – passwords already matched, and the API accepts the raw
-        //     string without re-splitting.
-        //   • When only the command fallback is available we assume passwords
-        //     do not contain spaces (a reasonable constraint for most servers).
         String password        = args[0];
         String confirmPassword = args[1];
 
@@ -63,21 +55,26 @@ public class RegisterSubmitCommand implements CommandExecutor {
             player.sendMessage(plugin.msg("password-mismatch"));
             // Re-open the register dialog so the player can try again
             plugin.getServer().getScheduler().runTask(plugin,
-                    () -> plugin.getDialogManager().openRegisterDialog(player));
+                    () -> plugin.getDialogManager().openRegisterDialog(player, plugin.msg("password-mismatch")));
             return true;
         }
 
-        player.sendMessage(plugin.msg("register-forwarded"));
-
-        var authMeApi = plugin.getAuthMeHook().getAuthMeApi();
-        if (authMeApi != null) {
-            // Use the AuthMe API directly: avoids command-line parsing issues
-            // (spaces, special characters) and lets AuthMe own all validation.
-            authMeApi.forceRegister(player, password);
-        } else {
-            // Fallback: dispatch /register via command (AuthMe not API-hooked)
-            player.performCommand("register " + password + " " + confirmPassword);
-        }
+        player.performCommand("register " + password + " " + confirmPassword);
+        String finalFailureMessage = plugin.msg("register-failed");
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline()) {
+                return;
+            }
+            if (plugin.getAuthMeHook().isHooked()
+                    // Treat a newly-created account as success even on setups
+                    // where AuthMe does not auto-login immediately after /register.
+                    && (plugin.getAuthMeHook().isAuthenticated(player)
+                    || plugin.getAuthMeHook().isRegistered(player))) {
+                plugin.getFlowManager().clearPlayer(player);
+                return;
+            }
+            plugin.getDialogManager().openRegisterDialog(player, finalFailureMessage);
+        }, RETRY_DELAY_TICKS);
 
         return true;
     }

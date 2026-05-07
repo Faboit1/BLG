@@ -13,7 +13,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
  * {@code config.yml}.  The flow:
  * <ol>
  *   <li>Rules dialog (if enabled and player hasn't accepted the current version)</li>
- *   <li>Choice dialog – a single "Register/Login" button, spammed every 100 ms
+ *   <li>Choice dialog – a single "Open Login" or "Open Register" button,
+ *       spammed every 100 ms
  *       up to the configured timeout</li>
  *   <li>The actual login or register dialog (opened when the button is clicked)</li>
  * </ol>
