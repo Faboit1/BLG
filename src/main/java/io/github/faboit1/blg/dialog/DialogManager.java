@@ -221,7 +221,7 @@ public class DialogManager {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
-                        List.<String[]>of(new String[]{button, "/blg_auto_choice"}),
+                        List.of(new String[]{button, "/blg_auto_choice"}),
                         null, null);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
