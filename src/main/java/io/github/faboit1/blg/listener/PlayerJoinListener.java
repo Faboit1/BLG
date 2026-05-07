@@ -7,15 +7,18 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
 /**
- * Optionally auto-opens the appropriate dialog when a player joins.
+ * Starts the login flow when a player joins.
  *
  * <p>This is only triggered when {@code autojoinlogingui: true} is set in
- * {@code config.yml} (with {@code auto-open-on-join} kept as a legacy alias).
- * It delegates to the same logic as {@code /openauto}.
+ * {@code config.yml}.  The flow:
+ * <ol>
+ *   <li>Rules dialog (if enabled and player hasn't accepted the current version)</li>
+ *   <li>Choice dialog – a single "Login / Register" button, spammed every 100 ms</li>
+ *   <li>The actual login or register dialog</li>
+ * </ol>
  *
- * <p>A one-tick delay is applied before opening the dialog to ensure the
- * player's client is fully loaded (avoids packet-order issues on some
- * client versions).
+ * <p>A configurable delay is applied before starting the flow so the player's
+ * client has time to finish the loading screen (avoids packet-order issues).
  */
 public class PlayerJoinListener implements Listener {
 
@@ -35,7 +38,9 @@ public class PlayerJoinListener implements Listener {
 
         var player = event.getPlayer();
 
-        // 1-tick delay to let the client finish loading
+        // Delay before opening the first dialog so the client finishes the loading screen.
+        long delayTicks = plugin.getConfig().getLong("join-dialog-delay-ticks", 20L);
+
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline()) {
                 return;
@@ -44,14 +49,8 @@ public class PlayerJoinListener implements Listener {
                     && plugin.getAuthMeHook().isAuthenticated(player)) {
                 return;
             }
-            // When AuthMe is not hooked, default to the login dialog so
-            // returning players are not incorrectly shown the register form.
-            if (plugin.getAuthMeHook().isHooked()
-                    && !plugin.getAuthMeHook().isRegistered(player)) {
-                plugin.getDialogManager().openRegisterDialog(player);
-            } else {
-                plugin.getDialogManager().openLoginDialog(player);
-            }
-        }, 1L);
+            plugin.getFlowManager().startFlow(player);
+        }, delayTicks);
     }
 }
+

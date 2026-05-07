@@ -1,0 +1,20 @@
+# BLG Server Rules
+# Lines starting with # are comments and are ignored.
+# Supports & colour codes (e.g. &6 for gold, &l for bold).
+# Edit freely – restart the server or run /updaterules to apply changes.
+
+&6&l--- Server Rules ---
+
+&e1. &fBe respectful to all players and staff.
+
+&e2. &fNo griefing, stealing, or destroying other players' builds.
+
+&e3. &fNo cheating, hacking, or use of unauthorized mods.
+
+&e4. &fNo spamming or advertising in chat.
+
+&e5. &fFollow all staff instructions.
+
+&e6. &fHave fun and enjoy your time on the server!
+
+&7&oBy clicking &r&aAccept&7&o you agree to follow these rules.

@@ -14,6 +14,7 @@ messages:
   openauto-usage: "&cUsage: /openauto or /openauto <player> &7(requires permission for other players)"
   openauto-console-usage: "&cConsole must use /openauto <player>."
   no-permission-others: "&cYou do not have permission to open the login GUI for other players."
+  no-permission: "&cYou do not have permission to use this command."
   player-not-found: "&cThat player is not online."
   force-opened-login: "&aOpened the login dialog for &e%player%&a."
 
@@ -27,6 +28,9 @@ messages:
   # Shown when register passwords do not match
   password-mismatch: "&cPasswords do not match. Please try again."
 
+  # Shown as the kick message when a player leaves via the rules "Leave Server" button
+  rules-leave-kick: "&cYou must accept the server rules to play."
+
 # Automatically open the login/register dialog when a player joins.
 # If AuthMe is installed and reports the player is already authenticated, no GUI is opened.
 autojoinlogingui: false
@@ -37,8 +41,25 @@ auto-join-login-gui: false
 # Legacy alias kept for backwards compatibility with older configs.
 auto-open-on-join: false
 
+# How many ticks to wait after a player joins before opening the first dialog.
+# Increase this if players see the dialog during the loading screen.
+# Default: 20 ticks = 1 second.
+join-dialog-delay-ticks: 20
+
 dialog:
   # All dialog text below supports legacy color codes via &
+
+  # --- Login-stub dialog (shown to registered players before the actual login form) ---
+  login-choice-title: "&lWelcome back!"
+  login-choice-body: "&7Click the button below to log in to the server."
+  login-choice-button: "&aLogin"
+
+  # --- Register-stub dialog (shown to new players before the actual register form) ---
+  register-choice-title: "&lWelcome!"
+  register-choice-body: "&7It looks like you don't have an account yet.\n&7Click the button below to create one."
+  register-choice-button: "&aRegister"
+
+  # --- Login dialog ---
   login-title: "&lLogin"
   register-title: "&lRegister"
 
@@ -59,3 +80,30 @@ dialog:
   # Paper Dialog API build. On supporting builds this also enables the client
   # show/hide control for the password field.
   password-masking-enabled: true
+
+  # --- Rules dialog ---
+  # %seconds% is replaced with the remaining wait time
+  rules-title: "&6&lServer Rules"
+  rules-wait-title: "&6&lServer Rules &e(wait %seconds%s)"
+  rules-accept-button: "&aAccept"
+  rules-leave-button: "&cLeave Server"
+  rules-prev-button: "&7< Previous"
+  rules-next-button: "&7Next >"
+
+# Rules system
+rules:
+  # Set to true to enable the rules screen on join (shown before the choice dialog)
+  enabled: false
+
+  # How many seconds the player must spend on the rules screen before they can
+  # click Accept or Leave Server.
+  wait-seconds: 15
+
+  # Page system for long rule sets.
+  # If the Dialog API supports scrolling natively the page system is not needed;
+  # enable it if your rules are too long to display in a single dialog.
+  pages:
+    enabled: false
+    # How many rules lines to show per page when pages are enabled.
+    lines-per-page: 10
+
