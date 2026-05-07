@@ -1,7 +1,6 @@
 package io.github.faboit1.blg.dialog;
 
 import io.github.faboit1.blg.BLGPlugin;
-import net.kyori.adventure.dialog.DialogLike;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 
@@ -45,6 +44,13 @@ public class DialogManager {
     /** Whether the Paper Dialog API is available on this server build. */
     private final boolean dialogApiAvailable;
 
+    /**
+     * Cached reference to {@code net.kyori.adventure.dialog.DialogLike}, loaded
+     * lazily when the Dialog API is first confirmed available.  {@code null} if
+     * the class is not on the classpath.
+     */
+    private static Class<?> dialogLikeClass;
+
     public DialogManager(BLGPlugin plugin) {
         this.plugin = plugin;
         this.dialogApiAvailable = probeDialogApi();
@@ -69,13 +75,13 @@ public class DialogManager {
 
         if (dialogApiAvailable) {
             try {
-                DialogLike dialog = buildDialog(
+                Object dialog = buildDialog(
                         title, body,
                         new String[]{"password"},
                         new String[]{pwLabel},
                         "/blg_login_submit $(password)",
                         button, cancel);
-                player.showDialog(dialog);
+                showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to open login dialog for " + player.getName()
@@ -103,13 +109,13 @@ public class DialogManager {
 
         if (dialogApiAvailable) {
             try {
-                DialogLike dialog = buildDialog(
+                Object dialog = buildDialog(
                         title, body,
                         new String[]{"password", "confirmPassword"},
                         new String[]{pwLabel, confirmLabel},
                         "/blg_register_submit $(password) $(confirmPassword)",
                         button, cancel);
-                player.showDialog(dialog);
+                showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to open register dialog for " + player.getName()
@@ -130,12 +136,11 @@ public class DialogManager {
 
     /**
      * Constructs a dialog using Paper's Dialog API loaded entirely via
-     * reflection.  The returned object implements
-     * {@link net.kyori.adventure.dialog.DialogLike} which IS present in the
-     * adventure-api bundled with all paper-api 1.21.5 snapshots.
+     * reflection so that the plugin compiles against any paper-api snapshot,
+     * even those that do not yet include the Dialog API packages.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private DialogLike buildDialog(String title, String bodyText,
+    private Object buildDialog(String title, String bodyText,
                                    String[] inputKeys, String[] inputLabels,
                                    String commandTemplate,
                                    String submitLabel, String cancelLabel)
@@ -232,7 +237,19 @@ public class DialogManager {
                 .getMethod("createDialog", Consumer.class)
                 .invoke(provider, factoryConsumer);
 
-        return (DialogLike) dialog;
+        return dialog;
+    }
+
+    /**
+     * Sends a dialog to a player via reflection, so that we don't need a
+     * compile-time dependency on {@code net.kyori.adventure.dialog.DialogLike}.
+     * The {@code DialogLike} class reference is cached after the first lookup.
+     */
+    private static void showDialogReflective(Player player, Object dialog) throws Exception {
+        if (dialogLikeClass == null) {
+            dialogLikeClass = Class.forName("net.kyori.adventure.dialog.DialogLike");
+        }
+        Player.class.getMethod("showDialog", dialogLikeClass).invoke(player, dialog);
     }
 
     /** Calls a single-argument method by name on {@code obj} and returns the result. */
