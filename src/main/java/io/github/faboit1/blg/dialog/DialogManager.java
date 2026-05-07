@@ -602,8 +602,14 @@ public class DialogManager {
             return dialogActionClass
                     .getMethod("staticAction", clickEventClass)
                     .invoke(null, clickEvent);
-        } catch (Exception ignored) {
-            // staticAction not available on this build – fall back to commandTemplate
+        } catch (NoSuchMethodException e) {
+            // staticAction not available on this Paper build – fall back to commandTemplate
+            plugin.getLogger().log(Level.FINE,
+                    "DialogAction.staticAction not found; falling back to commandTemplate for button: " + cmd);
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.FINE,
+                    "Failed to build staticAction for button '" + cmd + "'; falling back to commandTemplate: "
+                    + e.getMessage());
         }
         return dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, cmd);
     }
