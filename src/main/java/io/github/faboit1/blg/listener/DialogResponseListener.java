@@ -31,12 +31,10 @@ public class DialogResponseListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
         String message = event.getMessage();
-        if (!message.regionMatches(true, 0, INTERNAL_PREFIX, 0, INTERNAL_PREFIX.length())) {
-            return;
+        if (message.regionMatches(true, 0, INTERNAL_PREFIX, 0, INTERNAL_PREFIX.length())) {
+            event.setCancelled(true);
+            String commandLine = message.startsWith("/") ? message.substring(1) : message;
+            plugin.getServer().dispatchCommand(event.getPlayer(), commandLine);
         }
-
-        event.setCancelled(true);
-        String commandLine = message.startsWith("/") ? message.substring(1) : message;
-        plugin.getServer().dispatchCommand(event.getPlayer(), commandLine);
     }
 }
