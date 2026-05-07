@@ -2,6 +2,7 @@ package io.github.faboit1.blg.dialog;
 
 import io.github.faboit1.blg.BLGPlugin;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -38,6 +39,8 @@ public class DialogManager {
     private static final int SUBMIT_BUTTON_WIDTH = 200;
     private static final int CANCEL_BUTTON_WIDTH = 100;
     private static final int MAX_INPUT_LENGTH = 100;
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER =
+            LegacyComponentSerializer.legacySection();
 
     private final BLGPlugin plugin;
 
@@ -159,11 +162,11 @@ public class DialogManager {
         // ----- Build DialogBase -----
         Object baseBuilder = dialogBaseClass
                 .getMethod("builder", Component.class)
-                .invoke(null, Component.text(strip(title)));
+                .invoke(null, toComponent(title));
 
         Object bodyEntry = dialogBodyClass
                 .getMethod("plainMessage", Component.class)
-                .invoke(null, Component.text(strip(bodyText)));
+                .invoke(null, toComponent(bodyText));
         baseBuilder = call(baseBuilder, "body", List.class, List.of(bodyEntry));
         baseBuilder = call(baseBuilder, "canCloseWithEscape", boolean.class, false);
 
@@ -177,7 +180,7 @@ public class DialogManager {
         for (int i = 0; i < inputKeys.length; i++) {
             Object inputBuilder = dialogInputClass
                     .getMethod("text", String.class, Component.class)
-                    .invoke(null, inputKeys[i], Component.text(strip(inputLabels[i])));
+                    .invoke(null, inputKeys[i], toComponent(inputLabels[i]));
             inputBuilder = call(inputBuilder, "labelVisible", boolean.class, true);
             inputBuilder = call(inputBuilder, "maxLength", int.class, MAX_INPUT_LENGTH);
             inputs.add(inputBuilder.getClass().getMethod("build").invoke(inputBuilder));
@@ -192,12 +195,12 @@ public class DialogManager {
                 .invoke(null, commandTemplate);
         Object submitBtn = actionButtonClass
                 .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                .invoke(null, Component.text(strip(submitLabel)), null, SUBMIT_BUTTON_WIDTH, cmdAction);
+                .invoke(null, toComponent(submitLabel), null, SUBMIT_BUTTON_WIDTH, cmdAction);
 
         // ----- Build cancel button (null action = just closes) -----
         Object cancelBtn = actionButtonClass
                 .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                .invoke(null, Component.text(strip(cancelLabel)), null, CANCEL_BUTTON_WIDTH, null);
+                .invoke(null, toComponent(cancelLabel), null, CANCEL_BUTTON_WIDTH, null);
 
         // ----- Build DialogType (multiAction) -----
         Object typeBuilder = dialogTypeClass
@@ -280,9 +283,9 @@ public class DialogManager {
         }
     }
 
-    /** Strips Bukkit legacy colour codes from a string. */
-    private String strip(String text) {
-        return org.bukkit.ChatColor.stripColor(text);
+    /** Converts a legacy-colour-coded string into an Adventure component. */
+    private Component toComponent(String text) {
+        return LEGACY_SERIALIZER.deserialize(text == null ? "" : text);
     }
 
     /** Sends a friendly chat message when dialogs are unavailable. */
@@ -290,4 +293,3 @@ public class DialogManager {
         player.sendMessage(plugin.msg(messageKey));
     }
 }
-

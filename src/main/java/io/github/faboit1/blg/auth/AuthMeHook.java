@@ -71,6 +71,40 @@ public class AuthMeHook {
     }
 
     /**
+     * Returns {@code true} if the given player is currently authenticated in
+     * AuthMe.
+     *
+     * <p>The exact AuthMe API surface varies between builds, so this lookup is
+     * performed reflectively against the hooked API instance.
+     */
+    public boolean isAuthenticated(Player player) {
+        if (authMeApi == null) {
+            return false;
+        }
+
+        try {
+            Boolean result = invokeBoolean("isAuthenticated", Player.class, player);
+            if (result != null) {
+                return result;
+            }
+
+            result = invokeBoolean("isAuthenticated", String.class, player.getName());
+            if (result != null) {
+                return result;
+            }
+
+            plugin.getLogger().log(Level.FINE,
+                    "AuthMe API does not expose a supported isAuthenticated method.");
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "AuthMe isAuthenticated() threw an exception for "
+                            + player.getName() + ": " + e.getMessage(), e);
+        }
+
+        return false;
+    }
+
+    /**
      * Returns {@code true} when the AuthMe plugin was found and hooked
      * successfully.
      */
@@ -118,5 +152,17 @@ public class AuthMeHook {
         plugin.getLogger().warning(
                 "AuthMe not found or could not be hooked. " +
                 "/openauto will default to the register dialog.");
+    }
+
+    private Boolean invokeBoolean(String methodName, Class<?> parameterType, Object argument)
+            throws ReflectiveOperationException {
+        try {
+            Object result = authMeApi.getClass()
+                    .getMethod(methodName, parameterType)
+                    .invoke(authMeApi, argument);
+            return result instanceof Boolean bool ? bool : null;
+        } catch (NoSuchMethodException ignored) {
+            return null;
+        }
     }
 }
