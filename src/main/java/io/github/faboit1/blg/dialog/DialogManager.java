@@ -162,7 +162,7 @@ public class DialogManager {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
-                        (List<String[]>) (Object) Arrays.asList(new String[]{button, "/blg_login_choice"}),
+                        List.<String[]>of(new String[]{button, "/blg_login_choice"}),
                         null, null);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
@@ -192,7 +192,7 @@ public class DialogManager {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
-                        (List<String[]>) (Object) Arrays.asList(new String[]{button, "/blg_register_choice"}),
+                        List.<String[]>of(new String[]{button, "/blg_register_choice"}),
                         null, null);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
