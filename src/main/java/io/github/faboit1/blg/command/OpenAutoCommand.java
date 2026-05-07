@@ -53,7 +53,7 @@ public class OpenAutoCommand implements CommandExecutor {
         }
 
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.msg("openauto-usage"));
+            sender.sendMessage(plugin.msg("openauto-console-usage"));
             return true;
         }
 
