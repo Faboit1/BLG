@@ -126,7 +126,9 @@ public class FlowManager {
                 stopFlow(player);
                 return;
             }
-            if (plugin.getAuthMeHook().isHooked() && !plugin.getAuthMeHook().isRegistered(player)) {
+            boolean showRegisterChoice =
+                    plugin.getAuthMeHook().isHooked() && !plugin.getAuthMeHook().isRegistered(player);
+            if (showRegisterChoice) {
                 plugin.getDialogManager().openRegisterChoiceDialog(player);
             } else {
                 plugin.getDialogManager().openLoginChoiceDialog(player);
