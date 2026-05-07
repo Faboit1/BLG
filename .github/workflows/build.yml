@@ -27,6 +27,6 @@ jobs:
       - name: Upload plugin JAR
         uses: actions/upload-artifact@v4
         with:
-          name: BLG-${{ github.sha }}
+          name: BLG
           path: target/BLG-*.jar
           if-no-files-found: error
