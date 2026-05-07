@@ -154,14 +154,19 @@ public class AuthMeHook {
                 "/openauto will default to the register dialog.");
     }
 
-    private Boolean invokeBoolean(String methodName, Class<?> parameterType, Object argument)
-            throws ReflectiveOperationException {
+    private Boolean invokeBoolean(String methodName, Class<?> parameterType, Object argument) {
         try {
             Object result = authMeApi.getClass()
                     .getMethod(methodName, parameterType)
                     .invoke(authMeApi, argument);
             return result instanceof Boolean bool ? bool : null;
         } catch (NoSuchMethodException ignored) {
+            return null;
+        } catch (ReflectiveOperationException e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "AuthMe reflective call failed for method '" + methodName
+                            + "' with parameter " + parameterType.getSimpleName()
+                            + ": " + e.getMessage(), e);
             return null;
         }
     }

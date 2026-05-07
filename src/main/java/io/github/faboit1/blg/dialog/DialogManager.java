@@ -40,6 +40,14 @@ public class DialogManager {
     private static final int SUBMIT_BUTTON_WIDTH = 200;
     private static final int CANCEL_BUTTON_WIDTH = 100;
     private static final int MAX_INPUT_LENGTH = 100;
+    private static final List<String> PASSWORD_MASKING_METHODS = Arrays.asList(
+            "obfuscated",
+            "password",
+            "secret",
+            "masked",
+            "hidden",
+            "hideInput"
+    );
     private static final LegacyComponentSerializer LEGACY_SERIALIZER =
             LegacyComponentSerializer.legacySection();
 
@@ -274,16 +282,7 @@ public class DialogManager {
     }
 
     private Object applyPasswordMasking(Object inputBuilder) {
-        List<String> maskingMethods = Arrays.asList(
-                "obfuscated",
-                "password",
-                "secret",
-                "masked",
-                "hidden",
-                "hideInput"
-        );
-
-        for (String method : maskingMethods) {
+        for (String method : PASSWORD_MASKING_METHODS) {
             Object updated = callIfPresent(inputBuilder, method, true);
             if (updated != null) {
                 return updated;
@@ -304,13 +303,16 @@ public class DialogManager {
         return inputBuilder;
     }
 
-    private static Object callIfPresent(Object obj, String method, Object arg) {
+    private Object callIfPresent(Object obj, String method, Object arg) {
         try {
             Class<?> type = arg instanceof Boolean ? boolean.class : arg.getClass();
             return obj.getClass().getMethod(method, type).invoke(obj, arg);
         } catch (NoSuchMethodException ignored) {
             return null;
         } catch (Exception e) {
+            Level level = method.equals("showCharacters") ? Level.FINE : Level.WARNING;
+            plugin.getLogger().log(level,
+                    "Failed to apply password masking method '" + method + "': " + e.getMessage(), e);
             return null;
         }
     }
