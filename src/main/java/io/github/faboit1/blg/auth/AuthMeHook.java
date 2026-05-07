@@ -105,6 +105,27 @@ public class AuthMeHook {
     }
 
     /**
+     * Checks whether the supplied password matches the player's AuthMe account.
+     *
+     * @return {@code Boolean.TRUE}/{@code Boolean.FALSE} when AuthMe could
+     *         verify the password, or {@code null} when the check is unavailable
+     */
+    public Boolean checkPassword(Player player, String password) {
+        if (authMeApi == null) {
+            return null;
+        }
+
+        try {
+            return authMeApi.checkPassword(player.getName(), password);
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "AuthMe checkPassword() threw an exception for "
+                            + player.getName() + ": " + e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
      * Returns {@code true} when the AuthMe plugin was found and hooked
      * successfully.
      */

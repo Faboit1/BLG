@@ -82,11 +82,15 @@ public class DialogManager {
      * Opens the login dialog for the given player.
      *
      * <p>When the player clicks "Login" the client runs:
-     * <pre>/login $(password)</pre>
+     * <pre>/blg_login_submit $(password)</pre>
      */
     public void openLoginDialog(Player player) {
+        openLoginDialog(player, null);
+    }
+
+    public void openLoginDialog(Player player, String errorMessage) {
         String title   = plugin.cfg("dialog.login-title");
-        String body    = plugin.cfg("dialog.login-body");
+        String body    = withError(plugin.cfg("dialog.login-body"), errorMessage);
         String button  = plugin.cfg("dialog.login-button");
         String cancel  = plugin.cfg("dialog.cancel-button");
         String pwLabel = plugin.cfg("dialog.password-label");
@@ -98,16 +102,22 @@ public class DialogManager {
                         new String[]{"password"},
                         new boolean[]{true},
                         new String[]{pwLabel},
-                        "/login $(password)",
+                        "/blg_login_submit $(password)",
                         button, cancel);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to open login dialog for " + player.getName()
                         + ": " + e.getMessage(), e);
+                if (errorMessage != null && !errorMessage.isBlank()) {
+                    player.sendMessage(errorMessage);
+                }
                 fallbackChat(player, "login-prompt");
             }
         } else {
+            if (errorMessage != null && !errorMessage.isBlank()) {
+                player.sendMessage(errorMessage);
+            }
             fallbackChat(player, "login-prompt");
         }
     }
@@ -116,11 +126,15 @@ public class DialogManager {
      * Opens the register dialog for the given player.
      *
      * <p>When the player clicks "Register" the client runs:
-     * <pre>/register $(password) $(confirmPassword)</pre>
+     * <pre>/blg_register_submit $(password) $(confirmPassword)</pre>
      */
     public void openRegisterDialog(Player player) {
+        openRegisterDialog(player, null);
+    }
+
+    public void openRegisterDialog(Player player, String errorMessage) {
         String title        = plugin.cfg("dialog.register-title");
-        String body         = plugin.cfg("dialog.register-body");
+        String body         = withError(plugin.cfg("dialog.register-body"), errorMessage);
         String button       = plugin.cfg("dialog.register-button");
         String cancel       = plugin.cfg("dialog.cancel-button");
         String pwLabel      = plugin.cfg("dialog.password-label");
@@ -133,16 +147,22 @@ public class DialogManager {
                         new String[]{"password", "confirmPassword"},
                         new boolean[]{true, true},
                         new String[]{pwLabel, confirmLabel},
-                        "/register $(password) $(confirmPassword)",
+                        "/blg_register_submit $(password) $(confirmPassword)",
                         button, cancel);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to open register dialog for " + player.getName()
                         + ": " + e.getMessage(), e);
+                if (errorMessage != null && !errorMessage.isBlank()) {
+                    player.sendMessage(errorMessage);
+                }
                 fallbackChat(player, "register-prompt");
             }
         } else {
+            if (errorMessage != null && !errorMessage.isBlank()) {
+                player.sendMessage(errorMessage);
+            }
             fallbackChat(player, "register-prompt");
         }
     }
@@ -626,6 +646,16 @@ public class DialogManager {
     /** Sends a friendly chat message when dialogs are unavailable. */
     private void fallbackChat(Player player, String messageKey) {
         player.sendMessage(plugin.msg(messageKey));
+    }
+
+    private String withError(String body, String errorMessage) {
+        if (errorMessage == null || errorMessage.isBlank()) {
+            return body;
+        }
+        if (body == null || body.isBlank()) {
+            return errorMessage;
+        }
+        return errorMessage + "\n\n" + body;
     }
 
     /**
