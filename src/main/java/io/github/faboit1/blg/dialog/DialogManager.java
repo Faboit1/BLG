@@ -389,7 +389,7 @@ public class DialogManager {
             String label = btn.length > 0 ? btn[0] : "";
             String cmd   = btn.length > 1 ? btn[1] : null;
             Object action = cmd != null
-                    ? dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, cmd)
+                    ? buildClickAction(dialogActionClass, cmd)
                     : null;
             Object button = actionButtonClass
                     .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
@@ -404,7 +404,7 @@ public class DialogManager {
 
         if (exitButtonLabel != null) {
             Object exitAction = exitButtonCmd != null
-                    ? dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, exitButtonCmd)
+                    ? buildClickAction(dialogActionClass, exitButtonCmd)
                     : null;
             Object exitBtn = actionButtonClass
                     .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
@@ -576,6 +576,36 @@ public class DialogManager {
     private static Object call(Object obj, String method, Class<?> paramType, Object arg)
             throws Exception {
         return obj.getClass().getMethod(method, paramType).invoke(obj, arg);
+    }
+
+    /**
+     * Builds a {@code DialogAction} for a plain button click that runs {@code cmd}.
+     *
+     * <p>Prefers {@code DialogAction.staticAction(ClickEvent.runCommand(cmd))} when
+     * available (Paper 1.21.6+) because {@code staticAction} fires only when the
+     * player explicitly clicks the button.  On older builds (1.21.5) only
+     * {@code commandTemplate} exists; it is used as a fallback and works in the
+     * same way for button clicks that carry no form-input substitutions.
+     *
+     * @param dialogActionClass the {@code DialogAction} class loaded via reflection
+     * @param cmd               the command to run, including the leading {@code /}
+     * @return the created {@code DialogAction} instance
+     */
+    private static Object buildClickAction(Class<?> dialogActionClass, String cmd)
+            throws Exception {
+        // Preferred: staticAction(ClickEvent.runCommand(cmd)) – fires on explicit click only
+        try {
+            Class<?> clickEventClass = Class.forName("net.kyori.adventure.text.event.ClickEvent");
+            Object clickEvent = clickEventClass
+                    .getMethod("runCommand", String.class)
+                    .invoke(null, cmd);
+            return dialogActionClass
+                    .getMethod("staticAction", clickEventClass)
+                    .invoke(null, clickEvent);
+        } catch (Exception ignored) {
+            // staticAction not available on this build – fall back to commandTemplate
+        }
+        return dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, cmd);
     }
 
     private Object applyPasswordMasking(Object inputBuilder) {
