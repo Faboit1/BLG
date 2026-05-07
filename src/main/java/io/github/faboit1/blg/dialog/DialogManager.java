@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.Consumer;
@@ -221,7 +222,7 @@ public class DialogManager {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
-                        List.of(new String[]{button, "/blg_auto_choice"}),
+                        Collections.singletonList(new String[]{button, "/blg_auto_choice"}),
                         null, null);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
