@@ -54,3 +54,8 @@ dialog:
   # Input field labels
   password-label: "&fPassword"
   confirm-password-label: "&fConfirm Password"
+
+  # Hide password characters in login/register fields when supported by your
+  # Paper Dialog API build. On supporting builds this also enables the client
+  # show/hide control for the password field.
+  password-masking-enabled: true

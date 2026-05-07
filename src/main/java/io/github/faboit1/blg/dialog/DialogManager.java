@@ -6,6 +6,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -53,6 +54,7 @@ public class DialogManager {
      * the class is not on the classpath.
      */
     private static Class<?> dialogLikeClass;
+    private boolean passwordMaskingWarningLogged;
 
     public DialogManager(BLGPlugin plugin) {
         this.plugin = plugin;
@@ -81,6 +83,7 @@ public class DialogManager {
                 Object dialog = buildDialog(
                         title, body,
                         new String[]{"password"},
+                        new boolean[]{true},
                         new String[]{pwLabel},
                         "/blg_login_submit $(password)",
                         button, cancel);
@@ -115,6 +118,7 @@ public class DialogManager {
                 Object dialog = buildDialog(
                         title, body,
                         new String[]{"password", "confirmPassword"},
+                        new boolean[]{true, true},
                         new String[]{pwLabel, confirmLabel},
                         "/blg_register_submit $(password) $(confirmPassword)",
                         button, cancel);
@@ -144,10 +148,15 @@ public class DialogManager {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Object buildDialog(String title, String bodyText,
-                                   String[] inputKeys, String[] inputLabels,
-                                   String commandTemplate,
-                                   String submitLabel, String cancelLabel)
+                                   String[] inputKeys, boolean[] passwordInputs, String[] inputLabels,
+                                    String commandTemplate,
+                                    String submitLabel, String cancelLabel)
             throws Exception {
+        if (inputKeys.length != inputLabels.length || inputKeys.length != passwordInputs.length) {
+            throw new IllegalArgumentException("Input metadata length mismatch.");
+        }
+
+        boolean passwordMaskingEnabled = plugin.getConfig().getBoolean("dialog.password-masking-enabled", true);
 
         // ----- Load Paper Dialog API classes via reflection -----
         Class<?> dialogBaseClass   = Class.forName("io.papermc.paper.registry.data.dialog.DialogBase");
@@ -183,6 +192,9 @@ public class DialogManager {
                     .invoke(null, inputKeys[i], toComponent(inputLabels[i]));
             inputBuilder = call(inputBuilder, "labelVisible", boolean.class, true);
             inputBuilder = call(inputBuilder, "maxLength", int.class, MAX_INPUT_LENGTH);
+            if (passwordMaskingEnabled && passwordInputs[i]) {
+                inputBuilder = applyPasswordMasking(inputBuilder);
+            }
             inputs.add(inputBuilder.getClass().getMethod("build").invoke(inputBuilder));
         }
         baseBuilder = call(baseBuilder, "inputs", List.class, inputs);
@@ -259,6 +271,48 @@ public class DialogManager {
     private static Object call(Object obj, String method, Class<?> paramType, Object arg)
             throws Exception {
         return obj.getClass().getMethod(method, paramType).invoke(obj, arg);
+    }
+
+    private Object applyPasswordMasking(Object inputBuilder) {
+        List<String> maskingMethods = Arrays.asList(
+                "obfuscated",
+                "password",
+                "secret",
+                "masked",
+                "hidden",
+                "hideInput"
+        );
+
+        for (String method : maskingMethods) {
+            Object updated = callIfPresent(inputBuilder, method, true);
+            if (updated != null) {
+                return updated;
+            }
+        }
+
+        Object inverseUpdated = callIfPresent(inputBuilder, "showCharacters", false);
+        if (inverseUpdated != null) {
+            return inverseUpdated;
+        }
+
+        if (!passwordMaskingWarningLogged) {
+            passwordMaskingWarningLogged = true;
+            plugin.getLogger().warning(
+                    "Password masking is enabled in config, but this Paper Dialog API build " +
+                    "does not expose a known masking method. Falling back to plain text input.");
+        }
+        return inputBuilder;
+    }
+
+    private static Object callIfPresent(Object obj, String method, Object arg) {
+        try {
+            Class<?> type = arg instanceof Boolean ? boolean.class : arg.getClass();
+            return obj.getClass().getMethod(method, type).invoke(obj, arg);
+        } catch (NoSuchMethodException ignored) {
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // -----------------------------------------------------------------------
