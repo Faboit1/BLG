@@ -30,6 +30,10 @@ commands:
     description: Reloads rules.txt, backs up the old version, and invalidates cached acceptances if changed.
     usage: /updaterules
     permission: blg.admin
+  blgreload:
+    description: Reloads config.yml and rules.txt without restarting the server.
+    usage: /blgreload
+    permission: blg.admin
 
   # Internal commands used by dialog submit/navigation buttons – not for direct player use.
   blg_login_submit:
