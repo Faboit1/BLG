@@ -591,7 +591,7 @@ public class DialogManager {
      * @param cmd               the command to run, including the leading {@code /}
      * @return the created {@code DialogAction} instance
      */
-    private static Object buildClickAction(Class<?> dialogActionClass, String cmd)
+    private Object buildClickAction(Class<?> dialogActionClass, String cmd)
             throws Exception {
         // Preferred: staticAction(ClickEvent.runCommand(cmd)) – fires on explicit click only
         try {
