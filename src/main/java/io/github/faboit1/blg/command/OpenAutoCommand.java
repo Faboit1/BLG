@@ -47,7 +47,7 @@ public class OpenAutoCommand implements CommandExecutor {
             }
 
             plugin.getDialogManager().openLoginDialog(target);
-            sender.sendMessage(plugin.cfg("messages.force-opened-login")
+            sender.sendMessage(plugin.msg("force-opened-login")
                     .replace("%player%", target.getName()));
             return true;
         }
