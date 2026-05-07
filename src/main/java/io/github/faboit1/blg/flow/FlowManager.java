@@ -101,17 +101,31 @@ public class FlowManager {
     }
 
     /**
-     * Begins the choice-dialog spam stage (one "Login / Register" button).
+     * Begins the choice-dialog spam stage.
+     *
+     * <p>The dialog shown depends on whether the player is already registered
+     * in AuthMe:
+     * <ul>
+     *   <li>Registered → login-stub dialog (single "Login" button)</li>
+     *   <li>Not registered → register-stub dialog (single "Register" button)</li>
+     * </ul>
      */
     public void startChoiceStage(Player player) {
         stopFlow(player);
+
+        boolean isRegistered = plugin.getAuthMeHook().isHooked()
+                && plugin.getAuthMeHook().isRegistered(player);
 
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             if (!player.isOnline()) {
                 stopFlow(player);
                 return;
             }
-            plugin.getDialogManager().openChoiceDialog(player);
+            if (isRegistered) {
+                plugin.getDialogManager().openLoginChoiceDialog(player);
+            } else {
+                plugin.getDialogManager().openRegisterChoiceDialog(player);
+            }
         }, SPAM_INTERVAL_TICKS, SPAM_INTERVAL_TICKS);
 
         spamTasks.put(player.getUniqueId(), task);
@@ -125,8 +139,8 @@ public class FlowManager {
         BukkitTask task = spamTasks.remove(player.getUniqueId());
         if (task != null) task.cancel();
         // Do NOT remove rulesShownAt here – we need it to stay accurate if
-        // the stage restarts (e.g. page navigation).  It is cleaned on stopFlow
-        // only when the player fully exits the rules stage.
+        // the stage restarts (e.g. page navigation).  Full state is cleared
+        // in clearPlayer() when the player exits the rules stage entirely.
     }
 
     /**

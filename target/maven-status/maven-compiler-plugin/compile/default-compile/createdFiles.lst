@@ -8,6 +8,7 @@ io/github/faboit1/blg/listener/DialogResponseListener.class
 io/github/faboit1/blg/auth/AuthMeHook.class
 io/github/faboit1/blg/rules/RulesManager.class
 io/github/faboit1/blg/command/OpenAutoCommand.class
+io/github/faboit1/blg/command/internal/LoginChoiceCommand.class
 io/github/faboit1/blg/BLGPlugin.class
 io/github/faboit1/blg/command/OpenRegisterCommand.class
 io/github/faboit1/blg/command/internal/RulesAcceptCommand.class
@@ -15,4 +16,5 @@ io/github/faboit1/blg/command/internal/ChoiceClickCommand.class
 io/github/faboit1/blg/command/internal/RulesPageCommand.class
 io/github/faboit1/blg/listener/PlayerQuitListener.class
 io/github/faboit1/blg/command/internal/RegisterSubmitCommand.class
+io/github/faboit1/blg/command/internal/RegisterChoiceCommand.class
 io/github/faboit1/blg/dialog/DialogManager.class

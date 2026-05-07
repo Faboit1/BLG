@@ -5,7 +5,9 @@
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/OpenRegisterCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/UpdateRulesCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/ChoiceClickCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/LoginChoiceCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/LoginSubmitCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/RegisterChoiceCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/RegisterSubmitCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/RulesAcceptCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/RulesLeaveCommand.java

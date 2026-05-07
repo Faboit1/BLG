@@ -147,29 +147,58 @@ public class DialogManager {
     }
 
     /**
-     * Opens the welcome choice dialog for the given player.
+     * Opens the login-stub dialog for a registered player.
      *
-     * <p>Shows a single "Login / Register" button.  When clicked the client
-     * runs {@code /blg_choice_click}, which stops the spam task and opens the
-     * correct auth dialog.
+     * <p>Shows a single "Login" button.  When clicked the client runs
+     * {@code /blg_login_choice}, which stops the spam task and opens the actual
+     * login dialog (with the password input field).
      */
-    public void openChoiceDialog(Player player) {
-        String title  = plugin.cfg("dialog.choice-title");
-        String body   = plugin.cfg("dialog.choice-body");
-        String button = plugin.cfg("dialog.choice-button");
+    public void openLoginChoiceDialog(Player player) {
+        String title  = plugin.cfg("dialog.login-choice-title");
+        String body   = plugin.cfg("dialog.login-choice-body");
+        String button = plugin.cfg("dialog.login-choice-button");
 
         if (dialogApiAvailable) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
-                        (List<String[]>) (Object) Arrays.asList(new String[]{button, "/blg_choice_click"}),
+                        (List<String[]>) (Object) Arrays.asList(new String[]{button, "/blg_login_choice"}),
                         null, null);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
-                        "Failed to open choice dialog for " + player.getName()
+                        "Failed to open login-choice dialog for " + player.getName()
                         + ": " + e.getMessage(), e);
-                // Fallback: go straight to the auth dialog
+                openAuthFallback(player);
+            }
+        } else {
+            openAuthFallback(player);
+        }
+    }
+
+    /**
+     * Opens the register-stub dialog for an unregistered player.
+     *
+     * <p>Shows a single "Register" button.  When clicked the client runs
+     * {@code /blg_register_choice}, which stops the spam task and opens the
+     * actual register dialog (with the password input fields).
+     */
+    public void openRegisterChoiceDialog(Player player) {
+        String title  = plugin.cfg("dialog.register-choice-title");
+        String body   = plugin.cfg("dialog.register-choice-body");
+        String button = plugin.cfg("dialog.register-choice-button");
+
+        if (dialogApiAvailable) {
+            try {
+                Object dialog = buildButtonOnlyDialog(
+                        title, body,
+                        (List<String[]>) (Object) Arrays.asList(new String[]{button, "/blg_register_choice"}),
+                        null, null);
+                showDialogReflective(player, dialog);
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Failed to open register-choice dialog for " + player.getName()
+                        + ": " + e.getMessage(), e);
                 openAuthFallback(player);
             }
         } else {

@@ -49,10 +49,15 @@ join-dialog-delay-ticks: 20
 dialog:
   # All dialog text below supports legacy color codes via &
 
-  # --- Choice dialog (the initial "Login / Register" screen) ---
-  choice-title: "&lWelcome!"
-  choice-body: "&7Click the button below to log in or create an account."
-  choice-button: "&aLogin / Register"
+  # --- Login-stub dialog (shown to registered players before the actual login form) ---
+  login-choice-title: "&lWelcome back!"
+  login-choice-body: "&7Click the button below to log in to the server."
+  login-choice-button: "&aLogin"
+
+  # --- Register-stub dialog (shown to new players before the actual register form) ---
+  register-choice-title: "&lWelcome!"
+  register-choice-body: "&7It looks like you don't have an account yet.\n&7Click the button below to create one."
+  register-choice-button: "&aRegister"
 
   # --- Login dialog ---
   login-title: "&lLogin"
