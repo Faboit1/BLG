@@ -13,10 +13,13 @@ messages:
   authme-unavailable: "&cAuthMe integration is unavailable. Using login dialog by default."
   openauto-usage: "&cUsage: /openauto or /openauto <player> &7(requires permission for other players)"
   openauto-console-usage: "&cConsole must use /openauto <player>."
+  openprelogin-usage: "&cUsage: /openprelogin or /openprelogin <player> &7(requires permission for other players)"
+  openprelogin-console-usage: "&cConsole must use /openprelogin <player>."
   no-permission-others: "&cYou do not have permission to open the login GUI for other players."
   no-permission: "&cYou do not have permission to use this command."
   player-not-found: "&cThat player is not online."
   force-opened-login: "&aOpened the login dialog for &e%player%&a."
+  force-opened-prelogin: "&aOpened the pre-login dialog for &e%player%&a."
 
   # Shown if an internal command is called outside of a dialog context
   internal-command-blocked: "&cThis command can only be used through the login/register dialog."
@@ -27,6 +30,8 @@ messages:
 
   # Shown when register passwords do not match
   password-mismatch: "&cPasswords do not match. Please try again."
+  login-failed: "&cLogin failed. Please try again."
+  register-failed: "&cRegistration failed. Please try again."
 
   # Shown as the kick message when a player leaves via the rules "Leave Server" button
   rules-leave-kick: "&cYou must accept the server rules to play."
@@ -46,18 +51,27 @@ auto-open-on-join: false
 # Default: 20 ticks = 1 second.
 join-dialog-delay-ticks: 20
 
+# How long to keep re-sending the on-join choice dialog before stopping.
+# Default: 160 ticks = 8 seconds.
+join-choice-timeout-ticks: 160
+
 dialog:
   # All dialog text below supports legacy color codes via &
+
+  # --- Unified on-join choice dialog (shown when autojoinlogingui is enabled) ---
+  join-choice-title: "&lWelcome!"
+  join-choice-body: "&7Click the button below to continue."
+  join-choice-button: "&aRegister/Login"
 
   # --- Login-stub dialog (shown to registered players before the actual login form) ---
   login-choice-title: "&lWelcome back!"
   login-choice-body: "&7Click the button below to log in to the server."
-  login-choice-button: "&aLogin"
+  login-choice-button: "&aOPEN LOGIN"
 
   # --- Register-stub dialog (shown to new players before the actual register form) ---
   register-choice-title: "&lWelcome!"
   register-choice-body: "&7It looks like you don't have an account yet.\n&7Click the button below to create one."
-  register-choice-button: "&aRegister"
+  register-choice-button: "&aOPEN REGISTER"
 
   # --- Login dialog ---
   login-title: "&lLogin"
@@ -106,4 +120,3 @@ rules:
     enabled: false
     # How many rules lines to show per page when pages are enabled.
     lines-per-page: 10
-

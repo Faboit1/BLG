@@ -40,6 +40,13 @@ public class FlowManager {
     /** Active spam task per player. */
     private final Map<UUID, BukkitTask> spamTasks = new ConcurrentHashMap<>();
 
+    /**
+     * The login/register action the player intended when the rules dialog
+     * interrupted them.  Populated by the choice-button commands; consumed and
+     * cleared by {@link RulesAcceptCommand} after the player accepts.
+     */
+    private final Map<UUID, PendingAction> pendingActions = new ConcurrentHashMap<>();
+
     /** System-time (ms) when the rules dialog was first shown to this player. */
     private final Map<UUID, Long> rulesShownAt = new ConcurrentHashMap<>();
 
@@ -55,17 +62,13 @@ public class FlowManager {
     // -------------------------------------------------------------------------
 
     /**
-     * Starts the login flow for a player.  Begins with the rules stage if rules
-     * need to be accepted, otherwise skips straight to the choice stage.
+     * Starts the login flow for a player by showing the choice dialog
+     * immediately.  Rules are shown only when the player clicks Login or
+     * Register and has not yet accepted the current rules version.
      */
     public void startFlow(Player player) {
         stopFlow(player); // cancel any previous task first
-
-        if (plugin.getRulesManager().needsToAccept(player)) {
-            startRulesStage(player);
-        } else {
-            startChoiceStage(player);
-        }
+        startChoiceStage(player);
     }
 
     /**
@@ -158,6 +161,7 @@ public class FlowManager {
         stopFlow(player);
         rulesShownAt.remove(player.getUniqueId());
         rulesPage.remove(player.getUniqueId());
+        pendingActions.remove(player.getUniqueId());
     }
 
     /**
@@ -215,5 +219,27 @@ public class FlowManager {
         int from = safePage * linesPerPage;
         int to   = Math.min(from + linesPerPage, all.size());
         return all.subList(from, to);
+    }
+
+    /**
+     * Records what action the player intended (LOGIN or REGISTER) before the
+     * rules dialog interrupted them.  Consumed by {@code RulesAcceptCommand}.
+     */
+    public void setPendingAction(Player player, PendingAction action) {
+        pendingActions.put(player.getUniqueId(), action);
+    }
+
+    /**
+     * Returns the pending action for this player, or {@code null} if none is
+     * stored (e.g. the rules were shown at join rather than after a button
+     * click).
+     */
+    public PendingAction getPendingAction(Player player) {
+        return pendingActions.get(player.getUniqueId());
+    }
+
+    /** Removes the pending action for this player. */
+    public void clearPendingAction(Player player) {
+        pendingActions.remove(player.getUniqueId());
     }
 }
