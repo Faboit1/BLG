@@ -31,7 +31,7 @@ public class DialogResponseListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
         String message = event.getMessage();
-        if (message == null || !message.regionMatches(true, 0, INTERNAL_PREFIX, 0, INTERNAL_PREFIX.length())) {
+        if (!message.regionMatches(true, 0, INTERNAL_PREFIX, 0, INTERNAL_PREFIX.length())) {
             return;
         }
 
