@@ -4,9 +4,19 @@ import io.github.faboit1.blg.auth.AuthMeHook;
 import io.github.faboit1.blg.command.OpenAutoCommand;
 import io.github.faboit1.blg.command.OpenLoginCommand;
 import io.github.faboit1.blg.command.OpenRegisterCommand;
+import io.github.faboit1.blg.command.UpdateRulesCommand;
+import io.github.faboit1.blg.command.internal.ChoiceClickCommand;
+import io.github.faboit1.blg.command.internal.LoginSubmitCommand;
+import io.github.faboit1.blg.command.internal.RegisterSubmitCommand;
+import io.github.faboit1.blg.command.internal.RulesAcceptCommand;
+import io.github.faboit1.blg.command.internal.RulesLeaveCommand;
+import io.github.faboit1.blg.command.internal.RulesPageCommand;
 import io.github.faboit1.blg.dialog.DialogManager;
+import io.github.faboit1.blg.flow.FlowManager;
 import io.github.faboit1.blg.listener.DialogResponseListener;
 import io.github.faboit1.blg.listener.PlayerJoinListener;
+import io.github.faboit1.blg.listener.PlayerQuitListener;
+import io.github.faboit1.blg.rules.RulesManager;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -15,21 +25,26 @@ import org.bukkit.plugin.java.JavaPlugin;
  *
  * <p>This plugin does NOT handle authentication. It only:
  * <ul>
- *   <li>Sends Minecraft Dialog API packets to players as a login/register UI</li>
+ *   <li>Sends Minecraft Dialog API packets to players as a welcome/rules/login/register UI</li>
  *   <li>Forwards submitted credentials to AuthMe by dispatching commands</li>
  *   <li>Uses the AuthMe API (soft-dep) to decide whether to show login or register</li>
+ *   <li>Manages a server-rules acceptance system backed by {@code rules.txt}</li>
  * </ul>
  */
 public class BLGPlugin extends JavaPlugin {
 
     private DialogManager dialogManager;
-    private AuthMeHook authMeHook;
+    private AuthMeHook    authMeHook;
+    private RulesManager  rulesManager;
+    private FlowManager   flowManager;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
 
-        // Initialise sub-systems
+        // Initialise sub-systems (order matters: rules before flow before dialogs)
+        this.rulesManager  = new RulesManager(this);
+        this.flowManager   = new FlowManager(this);
         this.dialogManager = new DialogManager(this);
         this.authMeHook    = new AuthMeHook(this);
 
@@ -37,12 +52,18 @@ public class BLGPlugin extends JavaPlugin {
         registerCommand("openlogin",        new OpenLoginCommand(this));
         registerCommand("openregister",     new OpenRegisterCommand(this));
         registerCommand("openauto",         new OpenAutoCommand(this));
-        registerCommand("blg_login_submit", new io.github.faboit1.blg.command.internal.LoginSubmitCommand(this));
-        registerCommand("blg_register_submit", new io.github.faboit1.blg.command.internal.RegisterSubmitCommand(this));
+        registerCommand("updaterules",      new UpdateRulesCommand(this));
+        registerCommand("blg_login_submit",    new LoginSubmitCommand(this));
+        registerCommand("blg_register_submit", new RegisterSubmitCommand(this));
+        registerCommand("blg_choice_click",    new ChoiceClickCommand(this));
+        registerCommand("blg_rules_accept",    new RulesAcceptCommand(this));
+        registerCommand("blg_rules_leave",     new RulesLeaveCommand(this));
+        registerCommand("blg_rules_page",      new RulesPageCommand(this));
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new DialogResponseListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
 
         getLogger().info("BetterLoginGui enabled – dialog UI layer over AuthMe.");
     }
@@ -62,6 +83,14 @@ public class BLGPlugin extends JavaPlugin {
 
     public AuthMeHook getAuthMeHook() {
         return authMeHook;
+    }
+
+    public RulesManager getRulesManager() {
+        return rulesManager;
+    }
+
+    public FlowManager getFlowManager() {
+        return flowManager;
     }
 
     // -------------------------------------------------------------------------

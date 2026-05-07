@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Level;
+import java.util.StringJoiner;
 
 /**
  * Builds and displays Minecraft Dialog API screens to players.
@@ -39,6 +40,7 @@ public class DialogManager {
 
     private static final int SUBMIT_BUTTON_WIDTH = 200;
     private static final int CANCEL_BUTTON_WIDTH = 100;
+    private static final int NAV_BUTTON_WIDTH    = 100;
     private static final int MAX_INPUT_LENGTH = 100;
     // Attempt order: most likely names first based on Paper snapshots and
     // potential API naming variations exposed through reflection.
@@ -144,12 +146,212 @@ public class DialogManager {
         }
     }
 
+    /**
+     * Opens the welcome choice dialog for the given player.
+     *
+     * <p>Shows a single "Login / Register" button.  When clicked the client
+     * runs {@code /blg_choice_click}, which stops the spam task and opens the
+     * correct auth dialog.
+     */
+    public void openChoiceDialog(Player player) {
+        String title  = plugin.cfg("dialog.choice-title");
+        String body   = plugin.cfg("dialog.choice-body");
+        String button = plugin.cfg("dialog.choice-button");
+
+        if (dialogApiAvailable) {
+            try {
+                Object dialog = buildButtonOnlyDialog(
+                        title, body,
+                        (List<String[]>) (Object) Arrays.asList(new String[]{button, "/blg_choice_click"}),
+                        null, null);
+                showDialogReflective(player, dialog);
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Failed to open choice dialog for " + player.getName()
+                        + ": " + e.getMessage(), e);
+                // Fallback: go straight to the auth dialog
+                openAuthFallback(player);
+            }
+        } else {
+            openAuthFallback(player);
+        }
+    }
+
+    /**
+     * Opens the rules dialog for the given player.
+     *
+     * @param page           0-based page index (ignored when pages are disabled)
+     * @param canAct         whether the player has waited long enough to accept/leave
+     * @param secondsLeft    seconds remaining in the mandatory wait (0 when canAct is true)
+     */
+    public void openRulesDialog(Player player, int page, boolean canAct, int secondsLeft) {
+        boolean pagesEnabled = plugin.getConfig().getBoolean("rules.pages.enabled", false);
+        int totalPages       = plugin.getFlowManager().getTotalPages();
+        List<String> lines   = plugin.getFlowManager().getLinesForPage(page);
+
+        // Build body text
+        StringJoiner sj = new StringJoiner("\n");
+        for (String line : lines) {
+            sj.add(line);
+        }
+        String bodyText = sj.toString();
+
+        // Build title – show countdown when player must still wait
+        String titleTemplate = canAct
+                ? plugin.cfg("dialog.rules-title")
+                : plugin.cfg("dialog.rules-wait-title").replace("%seconds%", String.valueOf(secondsLeft));
+
+        // Build page label when pagination is active
+        if (pagesEnabled && totalPages > 1) {
+            titleTemplate = titleTemplate + " &7(" + (page + 1) + "/" + totalPages + ")";
+            titleTemplate = org.bukkit.ChatColor.translateAlternateColorCodes('&', titleTemplate);
+        }
+
+        // Collect main action buttons (page navigation + accept)
+        List<String[]> mainButtons = new ArrayList<>();
+
+        if (pagesEnabled && totalPages > 1) {
+            if (page > 0) {
+                mainButtons.add(new String[]{plugin.cfg("dialog.rules-prev-button"),
+                        "/blg_rules_page " + (page - 1)});
+            }
+            if (page < totalPages - 1) {
+                mainButtons.add(new String[]{plugin.cfg("dialog.rules-next-button"),
+                        "/blg_rules_page " + (page + 1)});
+            }
+        }
+
+        // Accept button is always present; the server enforces the wait on the command side
+        mainButtons.add(new String[]{plugin.cfg("dialog.rules-accept-button"), "/blg_rules_accept"});
+
+        String leaveLabel = plugin.cfg("dialog.rules-leave-button");
+
+        if (dialogApiAvailable) {
+            try {
+                Object dialog = buildButtonOnlyDialog(
+                        titleTemplate, bodyText,
+                        mainButtons,
+                        leaveLabel, "/blg_rules_leave");
+                showDialogReflective(player, dialog);
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Failed to open rules dialog for " + player.getName()
+                        + ": " + e.getMessage(), e);
+                sendRulesFallbackChat(player);
+            }
+        } else {
+            sendRulesFallbackChat(player);
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Dialog building via reflection
     // (All io.papermc.paper.dialog.* classes are loaded dynamically so that
     //  the plugin compiles against paper-api snapshots that may not yet
     //  include the Dialog API packages.)
     // -----------------------------------------------------------------------
+
+    /**
+     * Constructs a dialog that contains only action buttons (no text-input
+     * fields) using Paper's Dialog API loaded via reflection.
+     *
+     * @param title           dialog title (legacy colour codes supported)
+     * @param bodyText        body text shown in the dialog (newlines supported)
+     * @param mainButtons     list of {@code [label, command]} pairs for the main button row
+     * @param exitButtonLabel label for the exit/cancel button, or {@code null} for none
+     * @param exitButtonCmd   command run by the exit button, or {@code null} for close-only
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Object buildButtonOnlyDialog(String title, String bodyText,
+                                          List<String[]> mainButtons,
+                                          String exitButtonLabel, String exitButtonCmd)
+            throws Exception {
+
+        Class<?> dialogBaseClass   = Class.forName("io.papermc.paper.registry.data.dialog.DialogBase");
+        Class<?> dialogBodyClass   = Class.forName("io.papermc.paper.registry.data.dialog.body.DialogBody");
+        Class<?> dialogTypeClass   = Class.forName("io.papermc.paper.registry.data.dialog.type.DialogType");
+        Class<?> actionButtonClass = Class.forName("io.papermc.paper.registry.data.dialog.ActionButton");
+        Class<?> dialogActionClass = Class.forName("io.papermc.paper.registry.data.dialog.action.DialogAction");
+        Class<?> afterActionEnum   = Class.forName("io.papermc.paper.registry.data.dialog.DialogBase$DialogAfterAction");
+        Class<?> providerClass     = Class.forName("io.papermc.paper.registry.data.InlinedRegistryBuilderProvider");
+
+        // ----- Build DialogBase -----
+        Object baseBuilder = dialogBaseClass
+                .getMethod("builder", Component.class)
+                .invoke(null, toComponent(title));
+
+        Object bodyEntry = dialogBodyClass
+                .getMethod("plainMessage", Component.class)
+                .invoke(null, toComponent(bodyText));
+        baseBuilder = call(baseBuilder, "body", List.class, List.of(bodyEntry));
+        baseBuilder = call(baseBuilder, "canCloseWithEscape", boolean.class, false);
+
+        Object closeAction = Enum.valueOf((Class<Enum>) afterActionEnum, "CLOSE");
+        baseBuilder = baseBuilder.getClass()
+                .getMethod("afterAction", afterActionEnum)
+                .invoke(baseBuilder, closeAction);
+
+        Object dialogBase = baseBuilder.getClass().getMethod("build").invoke(baseBuilder);
+
+        // ----- Build main action buttons -----
+        List<Object> actionBtnObjects = new ArrayList<>();
+        for (String[] btn : mainButtons) {
+            String label = btn.length > 0 ? btn[0] : "";
+            String cmd   = btn.length > 1 ? btn[1] : null;
+            Object action = cmd != null
+                    ? dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, cmd)
+                    : null;
+            Object button = actionButtonClass
+                    .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
+                    .invoke(null, toComponent(label), null, SUBMIT_BUTTON_WIDTH, action);
+            actionBtnObjects.add(button);
+        }
+
+        // ----- Build DialogType -----
+        Object typeBuilder = dialogTypeClass
+                .getMethod("multiAction", List.class)
+                .invoke(null, actionBtnObjects);
+
+        if (exitButtonLabel != null) {
+            Object exitAction = exitButtonCmd != null
+                    ? dialogActionClass.getMethod("commandTemplate", String.class).invoke(null, exitButtonCmd)
+                    : null;
+            Object exitBtn = actionButtonClass
+                    .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
+                    .invoke(null, toComponent(exitButtonLabel), null, CANCEL_BUTTON_WIDTH, exitAction);
+            typeBuilder = typeBuilder.getClass()
+                    .getMethod("exitAction", actionButtonClass)
+                    .invoke(typeBuilder, exitBtn);
+        }
+
+        Object dialogType = typeBuilder.getClass().getMethod("build").invoke(typeBuilder);
+
+        // ----- Create Dialog via InlinedRegistryBuilderProvider -----
+        Object provider = providerClass.getMethod("instance").invoke(null);
+
+        final Object finalBase  = dialogBase;
+        final Object finalType  = dialogType;
+        final Class<?> finalBaseClass = dialogBaseClass;
+        final Class<?> finalTypeClass = dialogTypeClass;
+
+        Consumer<Object> factoryConsumer = factory -> {
+            try {
+                Object entryBuilder = factory.getClass().getMethod("empty").invoke(factory);
+                entryBuilder = entryBuilder.getClass()
+                        .getMethod("base", finalBaseClass)
+                        .invoke(entryBuilder, finalBase);
+                entryBuilder.getClass()
+                        .getMethod("type", finalTypeClass)
+                        .invoke(entryBuilder, finalType);
+            } catch (Exception ex) {
+                throw new RuntimeException("Dialog builder consumer failed", ex);
+            }
+        };
+
+        return providerClass
+                .getMethod("createDialog", Consumer.class)
+                .invoke(provider, factoryConsumer);
+    }
 
     /**
      * Constructs a dialog using Paper's Dialog API loaded entirely via
@@ -354,5 +556,32 @@ public class DialogManager {
     /** Sends a friendly chat message when dialogs are unavailable. */
     private void fallbackChat(Player player, String messageKey) {
         player.sendMessage(plugin.msg(messageKey));
+    }
+
+    /**
+     * Fallback when the Dialog API is unavailable and a player needs to go
+     * through the auth flow: directly open the appropriate auth dialog.
+     */
+    private void openAuthFallback(Player player) {
+        if (plugin.getAuthMeHook().isHooked() && !plugin.getAuthMeHook().isRegistered(player)) {
+            openRegisterDialog(player);
+        } else {
+            openLoginDialog(player);
+        }
+    }
+
+    /**
+     * Sends the rules as chat messages when the Dialog API is unavailable.
+     * Called at most once per spam tick – the caller should stop spamming
+     * after the fallback is shown.
+     */
+    private void sendRulesFallbackChat(Player player) {
+        List<String> lines = plugin.getRulesManager().getFormattedLines();
+        player.sendMessage(plugin.cfg("messages.prefix") + plugin.cfg("dialog.rules-title"));
+        for (String line : lines) {
+            player.sendMessage(line);
+        }
+        player.sendMessage(plugin.cfg("messages.prefix")
+                + "§7Type §a/blg_rules_accept §7to accept the rules or §c/blg_rules_leave §7to leave.");
     }
 }

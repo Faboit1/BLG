@@ -22,8 +22,12 @@ commands:
     description: Opens the correct dialog for yourself, or forces the login dialog for a target player.
     usage: /openauto [player]
     permission: blg.openauto
+  updaterules:
+    description: Reloads rules.txt, backs up the old version, and invalidates cached acceptances if changed.
+    usage: /updaterules
+    permission: blg.admin
 
-  # Internal commands used by dialog submit buttons – not for direct player use.
+  # Internal commands used by dialog submit/navigation buttons – not for direct player use.
   blg_login_submit:
     description: Internal – called by the login dialog submit button.
     usage: /blg_login_submit <password>
@@ -31,6 +35,22 @@ commands:
   blg_register_submit:
     description: Internal – called by the register dialog submit button.
     usage: /blg_register_submit <password> <confirmPassword>
+    permission: blg.internal
+  blg_choice_click:
+    description: Internal – called by the welcome choice dialog button.
+    usage: /blg_choice_click
+    permission: blg.internal
+  blg_rules_accept:
+    description: Internal – called by the rules accept button.
+    usage: /blg_rules_accept
+    permission: blg.internal
+  blg_rules_leave:
+    description: Internal – called by the rules leave button.
+    usage: /blg_rules_leave
+    permission: blg.internal
+  blg_rules_page:
+    description: Internal – navigates to a specific rules page.
+    usage: /blg_rules_page <page>
     permission: blg.internal
 
 permissions:
@@ -47,7 +67,7 @@ permissions:
     description: Allows forcing the login dialog open for other players with /openauto <player>.
     default: op
   blg.internal:
-    description: Internal permission for dialog submit commands.
+    description: Internal permission for dialog submit and navigation commands.
     default: true
   blg.admin:
     description: Full administrative access.
