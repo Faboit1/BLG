@@ -9,8 +9,9 @@ import org.bukkit.event.player.PlayerJoinEvent;
 /**
  * Optionally auto-opens the appropriate dialog when a player joins.
  *
- * <p>This is only triggered when {@code auto-open-on-join: true} is set in
- * {@code config.yml}.  It delegates to the same logic as {@code /openauto}.
+ * <p>This is only triggered when {@code autojoinlogingui: true} is set in
+ * {@code config.yml} (with {@code auto-open-on-join} kept as a legacy alias).
+ * It delegates to the same logic as {@code /openauto}.
  *
  * <p>A one-tick delay is applied before opening the dialog to ensure the
  * player's client is fully loaded (avoids packet-order issues on some
@@ -26,7 +27,9 @@ public class PlayerJoinListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        if (!plugin.getConfig().getBoolean("auto-open-on-join", false)) {
+        if (!plugin.getConfig().getBoolean("autojoinlogingui",
+                plugin.getConfig().getBoolean("auto-join-login-gui",
+                        plugin.getConfig().getBoolean("auto-open-on-join", false)))) {
             return;
         }
 
@@ -35,6 +38,10 @@ public class PlayerJoinListener implements Listener {
         // 1-tick delay to let the client finish loading
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline()) {
+                return;
+            }
+            if (plugin.getAuthMeHook().isHooked()
+                    && plugin.getAuthMeHook().isAuthenticated(player)) {
                 return;
             }
             // When AuthMe is not hooked, default to the login dialog so

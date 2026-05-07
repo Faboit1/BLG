@@ -2,9 +2,11 @@ package io.github.faboit1.blg.dialog;
 
 import io.github.faboit1.blg.BLGPlugin;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -38,6 +40,18 @@ public class DialogManager {
     private static final int SUBMIT_BUTTON_WIDTH = 200;
     private static final int CANCEL_BUTTON_WIDTH = 100;
     private static final int MAX_INPUT_LENGTH = 100;
+    // Attempt order: most likely names first based on Paper snapshots and
+    // potential API naming variations exposed through reflection.
+    private static final List<String> PASSWORD_MASKING_METHODS = Arrays.asList(
+            "obfuscated",
+            "password",
+            "secret",
+            "masked",
+            "hidden",
+            "hideInput"
+    );
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER =
+            LegacyComponentSerializer.legacySection();
 
     private final BLGPlugin plugin;
 
@@ -50,6 +64,7 @@ public class DialogManager {
      * the class is not on the classpath.
      */
     private static Class<?> dialogLikeClass;
+    private boolean passwordMaskingWarningLogged;
 
     public DialogManager(BLGPlugin plugin) {
         this.plugin = plugin;
@@ -78,6 +93,7 @@ public class DialogManager {
                 Object dialog = buildDialog(
                         title, body,
                         new String[]{"password"},
+                        new boolean[]{true},
                         new String[]{pwLabel},
                         "/blg_login_submit $(password)",
                         button, cancel);
@@ -112,6 +128,7 @@ public class DialogManager {
                 Object dialog = buildDialog(
                         title, body,
                         new String[]{"password", "confirmPassword"},
+                        new boolean[]{true, true},
                         new String[]{pwLabel, confirmLabel},
                         "/blg_register_submit $(password) $(confirmPassword)",
                         button, cancel);
@@ -141,10 +158,18 @@ public class DialogManager {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Object buildDialog(String title, String bodyText,
-                                   String[] inputKeys, String[] inputLabels,
-                                   String commandTemplate,
-                                   String submitLabel, String cancelLabel)
+                                   String[] inputKeys, boolean[] passwordInputs, String[] inputLabels,
+                                    String commandTemplate,
+                                    String submitLabel, String cancelLabel)
             throws Exception {
+        if (inputKeys.length != inputLabels.length || inputKeys.length != passwordInputs.length) {
+            throw new IllegalArgumentException(
+                    "Input metadata length mismatch: keys=" + inputKeys.length
+                            + ", labels=" + inputLabels.length
+                            + ", passwordInputs=" + passwordInputs.length);
+        }
+
+        boolean passwordMaskingEnabled = plugin.getConfig().getBoolean("dialog.password-masking-enabled", true);
 
         // ----- Load Paper Dialog API classes via reflection -----
         Class<?> dialogBaseClass   = Class.forName("io.papermc.paper.registry.data.dialog.DialogBase");
@@ -159,11 +184,11 @@ public class DialogManager {
         // ----- Build DialogBase -----
         Object baseBuilder = dialogBaseClass
                 .getMethod("builder", Component.class)
-                .invoke(null, Component.text(strip(title)));
+                .invoke(null, toComponent(title));
 
         Object bodyEntry = dialogBodyClass
                 .getMethod("plainMessage", Component.class)
-                .invoke(null, Component.text(strip(bodyText)));
+                .invoke(null, toComponent(bodyText));
         baseBuilder = call(baseBuilder, "body", List.class, List.of(bodyEntry));
         baseBuilder = call(baseBuilder, "canCloseWithEscape", boolean.class, false);
 
@@ -177,9 +202,12 @@ public class DialogManager {
         for (int i = 0; i < inputKeys.length; i++) {
             Object inputBuilder = dialogInputClass
                     .getMethod("text", String.class, Component.class)
-                    .invoke(null, inputKeys[i], Component.text(strip(inputLabels[i])));
+                    .invoke(null, inputKeys[i], toComponent(inputLabels[i]));
             inputBuilder = call(inputBuilder, "labelVisible", boolean.class, true);
             inputBuilder = call(inputBuilder, "maxLength", int.class, MAX_INPUT_LENGTH);
+            if (passwordMaskingEnabled && passwordInputs[i]) {
+                inputBuilder = applyPasswordMasking(inputBuilder);
+            }
             inputs.add(inputBuilder.getClass().getMethod("build").invoke(inputBuilder));
         }
         baseBuilder = call(baseBuilder, "inputs", List.class, inputs);
@@ -192,12 +220,12 @@ public class DialogManager {
                 .invoke(null, commandTemplate);
         Object submitBtn = actionButtonClass
                 .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                .invoke(null, Component.text(strip(submitLabel)), null, SUBMIT_BUTTON_WIDTH, cmdAction);
+                .invoke(null, toComponent(submitLabel), null, SUBMIT_BUTTON_WIDTH, cmdAction);
 
         // ----- Build cancel button (null action = just closes) -----
         Object cancelBtn = actionButtonClass
                 .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                .invoke(null, Component.text(strip(cancelLabel)), null, CANCEL_BUTTON_WIDTH, null);
+                .invoke(null, toComponent(cancelLabel), null, CANCEL_BUTTON_WIDTH, null);
 
         // ----- Build DialogType (multiAction) -----
         Object typeBuilder = dialogTypeClass
@@ -258,6 +286,44 @@ public class DialogManager {
         return obj.getClass().getMethod(method, paramType).invoke(obj, arg);
     }
 
+    private Object applyPasswordMasking(Object inputBuilder) {
+        for (String method : PASSWORD_MASKING_METHODS) {
+            Object updated = callIfPresent(inputBuilder, method, true);
+            if (updated != null) {
+                return updated;
+            }
+        }
+
+        Object inverseUpdated = callIfPresent(inputBuilder, "showCharacters", false);
+        if (inverseUpdated != null) {
+            return inverseUpdated;
+        }
+
+        if (!passwordMaskingWarningLogged) {
+            passwordMaskingWarningLogged = true;
+            plugin.getLogger().warning(
+                    "Password masking is enabled in config, but this Paper Dialog API build " +
+                    "does not expose a known masking method. Falling back to plain text input.");
+        }
+        return inputBuilder;
+    }
+
+    private Object callIfPresent(Object obj, String method, Object arg) {
+        try {
+            Class<?> type = arg instanceof Boolean ? boolean.class : arg.getClass();
+            return obj.getClass().getMethod(method, type).invoke(obj, arg);
+        } catch (NoSuchMethodException ignored) {
+            return null;
+        } catch (Exception e) {
+            // `showCharacters(false)` is a fallback probe and can fail on many
+            // builds where the API simply does not expose it, so keep noise low.
+            Level level = method.equals("showCharacters") ? Level.FINE : Level.WARNING;
+            plugin.getLogger().log(level,
+                    "Failed to apply password masking method '" + method + "': " + e.getMessage(), e);
+            return null;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Utilities
     // -----------------------------------------------------------------------
@@ -280,9 +346,9 @@ public class DialogManager {
         }
     }
 
-    /** Strips Bukkit legacy colour codes from a string. */
-    private String strip(String text) {
-        return org.bukkit.ChatColor.stripColor(text);
+    /** Converts a legacy-colour-coded string into an Adventure component. */
+    private Component toComponent(String text) {
+        return LEGACY_SERIALIZER.deserialize(text == null ? "" : text);
     }
 
     /** Sends a friendly chat message when dialogs are unavailable. */
@@ -290,4 +356,3 @@ public class DialogManager {
         player.sendMessage(plugin.msg(messageKey));
     }
 }
-

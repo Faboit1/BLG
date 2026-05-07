@@ -26,6 +26,7 @@ public class AuthMeHook {
      * Live reference to the AuthMe API, or {@code null} if AuthMe is absent.
      */
     private AuthMeApi authMeApi;
+    private boolean authenticatedMethodWarningLogged;
 
     public AuthMeHook(BLGPlugin plugin) {
         this.plugin = plugin;
@@ -68,6 +69,39 @@ public class AuthMeHook {
                     + player.getName() + ": " + e.getMessage(), e);
             return false;
         }
+    }
+
+    /**
+     * Returns {@code true} if the given player is currently authenticated in
+     * AuthMe.
+     *
+     * <p>The exact AuthMe API surface varies between builds, so this lookup is
+     * performed reflectively against the hooked API instance.
+     */
+    public boolean isAuthenticated(Player player) {
+        if (authMeApi == null) {
+            return false;
+        }
+
+        try {
+            Boolean result = invokeBoolean("isAuthenticated", Player.class, player);
+            if (result != null) {
+                return result;
+            }
+
+            result = invokeBoolean("isAuthenticated", String.class, player.getName());
+            if (result != null) {
+                return result;
+            }
+
+            logUnsupportedAuthenticatedMethod();
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "AuthMe isAuthenticated() threw an exception for "
+                            + player.getName() + ": " + e.getMessage(), e);
+        }
+
+        return false;
     }
 
     /**
@@ -118,5 +152,32 @@ public class AuthMeHook {
         plugin.getLogger().warning(
                 "AuthMe not found or could not be hooked. " +
                 "/openauto will default to the register dialog.");
+    }
+
+    private Boolean invokeBoolean(String methodName, Class<?> parameterType, Object argument) {
+        try {
+            Object result = authMeApi.getClass()
+                    .getMethod(methodName, parameterType)
+                    .invoke(authMeApi, argument);
+            return result instanceof Boolean bool ? bool : null;
+        } catch (NoSuchMethodException ignored) {
+            return null;
+        } catch (ReflectiveOperationException e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "AuthMe reflective call failed for method '" + methodName
+                            + "' with parameter " + parameterType.getSimpleName()
+                            + ": " + e.getMessage(), e);
+            return null;
+        }
+    }
+
+    private void logUnsupportedAuthenticatedMethod() {
+        if (authenticatedMethodWarningLogged) {
+            return;
+        }
+        authenticatedMethodWarningLogged = true;
+        plugin.getLogger().log(Level.WARNING,
+                "AuthMe API does not expose a supported isAuthenticated method; "
+                        + "autojoin login checks will treat players as unauthenticated.");
     }
 }

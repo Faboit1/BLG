@@ -19,8 +19,8 @@ commands:
     usage: /openregister
     permission: blg.openregister
   openauto:
-    description: Automatically opens login or register dialog based on AuthMe registration status.
-    usage: /openauto
+    description: Opens the correct dialog for yourself, or forces the login dialog for a target player.
+    usage: /openauto [player]
     permission: blg.openauto
 
   # Internal commands used by dialog submit buttons – not for direct player use.
@@ -43,6 +43,9 @@ permissions:
   blg.openauto:
     description: Allows using /openauto.
     default: true
+  blg.openauto.others:
+    description: Allows forcing the login dialog open for other players with /openauto <player>.
+    default: op
   blg.internal:
     description: Internal permission for dialog submit commands.
     default: true
@@ -53,4 +56,5 @@ permissions:
       blg.openlogin: true
       blg.openregister: true
       blg.openauto: true
+      blg.openauto.others: true
       blg.internal: true

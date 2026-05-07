@@ -11,6 +11,11 @@ messages:
 
   # Shown when AuthMe is not available and /openauto is used
   authme-unavailable: "&cAuthMe integration is unavailable. Using login dialog by default."
+  openauto-usage: "&cUsage: /openauto or /openauto <player> &7(requires permission for other players)"
+  openauto-console-usage: "&cConsole must use /openauto <player>."
+  no-permission-others: "&cYou do not have permission to open the login GUI for other players."
+  player-not-found: "&cThat player is not online."
+  force-opened-login: "&aOpened the login dialog for &e%player%&a."
 
   # Shown if an internal command is called outside of a dialog context
   internal-command-blocked: "&cThis command can only be used through the login/register dialog."
@@ -23,23 +28,34 @@ messages:
   password-mismatch: "&cPasswords do not match. Please try again."
 
 # Automatically open the login/register dialog when a player joins.
-# Requires AuthMe to be installed for the correct dialog to be chosen.
+# If AuthMe is installed and reports the player is already authenticated, no GUI is opened.
+autojoinlogingui: false
+
+# Alias with kebab-case naming.
+auto-join-login-gui: false
+
+# Legacy alias kept for backwards compatibility with older configs.
 auto-open-on-join: false
 
 dialog:
-  # Title text for each dialog (supports legacy color codes via &)
+  # All dialog text below supports legacy color codes via &
   login-title: "&lLogin"
   register-title: "&lRegister"
 
   # Body text displayed inside each dialog
-  login-body: "Enter your password to log in to the server."
-  register-body: "Choose a password to create your account.\nEnter the same password twice to confirm."
+  login-body: "&7Enter your password to log in to the server."
+  register-body: "&7Choose a password to create your account.\n&7Enter the same password twice to confirm."
 
   # Button labels
-  login-button: "Login"
-  register-button: "Register"
-  cancel-button: "Cancel"
+  login-button: "&aLogin"
+  register-button: "&aRegister"
+  cancel-button: "&cCancel"
 
   # Input field labels
-  password-label: "Password"
-  confirm-password-label: "Confirm Password"
+  password-label: "&fPassword"
+  confirm-password-label: "&fConfirm Password"
+
+  # Hide password characters in login/register fields when supported by your
+  # Paper Dialog API build. On supporting builds this also enables the client
+  # show/hide control for the password field.
+  password-masking-enabled: true

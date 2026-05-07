@@ -1,6 +1,7 @@
 package io.github.faboit1.blg.command;
 
 import io.github.faboit1.blg.BLGPlugin;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -13,6 +14,8 @@ import org.bukkit.entity.Player;
  *   <li>If the player is already registered in AuthMe → login dialog.</li>
  *   <li>If the player is NOT registered (or AuthMe is unavailable) → register
  *       dialog.</li>
+ *   <li>If a target player is supplied and the sender has permission → force
+ *       open the login dialog for that player.</li>
  * </ul>
  */
 public class OpenAutoCommand implements CommandExecutor {
@@ -26,8 +29,31 @@ public class OpenAutoCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command,
                              String label, String[] args) {
+        if (args.length > 1) {
+            sender.sendMessage(plugin.msg("openauto-usage"));
+            return true;
+        }
+
+        if (args.length == 1) {
+            if (!sender.hasPermission("blg.openauto.others")) {
+                sender.sendMessage(plugin.msg("no-permission-others"));
+                return true;
+            }
+
+            Player target = Bukkit.getPlayer(args[0]);
+            if (target == null) {
+                sender.sendMessage(plugin.msg("player-not-found"));
+                return true;
+            }
+
+            plugin.getDialogManager().openLoginDialog(target);
+            sender.sendMessage(plugin.msg("force-opened-login")
+                    .replace("%player%", target.getName()));
+            return true;
+        }
+
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("This command can only be used by players.");
+            sender.sendMessage(plugin.msg("openauto-console-usage"));
             return true;
         }
 
