@@ -28,7 +28,8 @@ public class PlayerJoinListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (!plugin.getConfig().getBoolean("autojoinlogingui",
-                plugin.getConfig().getBoolean("auto-open-on-join", false))) {
+                plugin.getConfig().getBoolean("auto-join-login-gui",
+                        plugin.getConfig().getBoolean("auto-open-on-join", false)))) {
             return;
         }
 

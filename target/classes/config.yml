@@ -31,6 +31,9 @@ messages:
 # If AuthMe is installed and reports the player is already authenticated, no GUI is opened.
 autojoinlogingui: false
 
+# Alias with kebab-case naming.
+auto-join-login-gui: false
+
 # Legacy alias kept for backwards compatibility with older configs.
 auto-open-on-join: false
 

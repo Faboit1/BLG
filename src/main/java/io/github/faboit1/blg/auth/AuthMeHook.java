@@ -26,6 +26,7 @@ public class AuthMeHook {
      * Live reference to the AuthMe API, or {@code null} if AuthMe is absent.
      */
     private AuthMeApi authMeApi;
+    private boolean authenticatedMethodWarningLogged;
 
     public AuthMeHook(BLGPlugin plugin) {
         this.plugin = plugin;
@@ -93,8 +94,7 @@ public class AuthMeHook {
                 return result;
             }
 
-            plugin.getLogger().log(Level.FINE,
-                    "AuthMe API does not expose a supported isAuthenticated method.");
+            logUnsupportedAuthenticatedMethod();
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING,
                     "AuthMe isAuthenticated() threw an exception for "
@@ -164,5 +164,15 @@ public class AuthMeHook {
         } catch (NoSuchMethodException ignored) {
             return null;
         }
+    }
+
+    private void logUnsupportedAuthenticatedMethod() {
+        if (authenticatedMethodWarningLogged) {
+            return;
+        }
+        authenticatedMethodWarningLogged = true;
+        plugin.getLogger().log(Level.WARNING,
+                "AuthMe API does not expose a supported isAuthenticated method; "
+                        + "autojoin login checks will treat players as unauthenticated.");
     }
 }
