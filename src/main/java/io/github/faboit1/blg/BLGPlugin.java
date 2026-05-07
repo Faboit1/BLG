@@ -3,6 +3,7 @@ package io.github.faboit1.blg;
 import io.github.faboit1.blg.auth.AuthMeHook;
 import io.github.faboit1.blg.command.OpenAutoCommand;
 import io.github.faboit1.blg.command.OpenLoginCommand;
+import io.github.faboit1.blg.command.OpenPreLoginCommand;
 import io.github.faboit1.blg.command.OpenRegisterCommand;
 import io.github.faboit1.blg.command.UpdateRulesCommand;
 import io.github.faboit1.blg.command.internal.AutoChoiceCommand;
@@ -54,6 +55,7 @@ public class BLGPlugin extends JavaPlugin {
         registerCommand("openlogin",        new OpenLoginCommand(this));
         registerCommand("openregister",     new OpenRegisterCommand(this));
         registerCommand("openauto",         new OpenAutoCommand(this));
+        registerCommand("openprelogin",     new OpenPreLoginCommand(this));
         registerCommand("updaterules",      new UpdateRulesCommand(this));
         registerCommand("blg_login_submit",    new LoginSubmitCommand(this));
         registerCommand("blg_register_submit", new RegisterSubmitCommand(this));

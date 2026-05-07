@@ -13,10 +13,13 @@ messages:
   authme-unavailable: "&cAuthMe integration is unavailable. Using login dialog by default."
   openauto-usage: "&cUsage: /openauto or /openauto <player> &7(requires permission for other players)"
   openauto-console-usage: "&cConsole must use /openauto <player>."
+  openprelogin-usage: "&cUsage: /openprelogin or /openprelogin <player> &7(requires permission for other players)"
+  openprelogin-console-usage: "&cConsole must use /openprelogin <player>."
   no-permission-others: "&cYou do not have permission to open the login GUI for other players."
   no-permission: "&cYou do not have permission to use this command."
   player-not-found: "&cThat player is not online."
   force-opened-login: "&aOpened the login dialog for &e%player%&a."
+  force-opened-prelogin: "&aOpened the pre-login dialog for &e%player%&a."
 
   # Shown if an internal command is called outside of a dialog context
   internal-command-blocked: "&cThis command can only be used through the login/register dialog."
