@@ -12,7 +12,7 @@ import org.bukkit.entity.Player;
  * <p>This command is <strong>never</strong> typed by the player manually.
  * It is the command template bound to the submit button of the register dialog:
  * <pre>
- *   template: "/blg_register_submit %password% %confirmPassword%"
+ *   template: "/blg_register_submit $(password) $(confirmPassword)"
  * </pre>
  * When the player clicks "Register", the Minecraft client substitutes both
  * placeholders with the values the player typed and sends the command to the

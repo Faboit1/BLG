@@ -12,10 +12,10 @@ import org.bukkit.entity.Player;
  * <p>This command is <strong>never</strong> typed by the player manually.
  * It is the command template bound to the submit button of the login dialog:
  * <pre>
- *   template: "/blg_login_submit %password%"
+ *   template: "/blg_login_submit $(password)"
  * </pre>
  * When the player clicks "Login", the Minecraft client substitutes
- * {@code %password%} with whatever the player typed in the password field and
+ * {@code $(password)} with whatever the player typed in the password field and
  * sends the resulting command to the server.
  *
  * <p>The command forwards the credential to AuthMe by dispatching
@@ -43,7 +43,7 @@ public class LoginSubmitCommand implements CommandExecutor {
         }
 
         // Reconstruct the full password from all args.  The dialog command
-        // template substitutes %password% verbatim; if the player's password
+        // template substitutes $(password) verbatim; if the player's password
         // contains spaces the client sends them as separate args.  Joining
         // restores the original value.
         String password = String.join(" ", args);
