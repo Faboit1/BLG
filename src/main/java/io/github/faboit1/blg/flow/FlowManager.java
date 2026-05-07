@@ -104,9 +104,8 @@ public class FlowManager {
     /**
      * Begins the on-join choice-dialog spam stage.
      *
-     * <p>A one-button "Open Login" or "Open Register" dialog is chosen from
-     * current AuthMe registration state and re-opened repeatedly until clicked
-     * or timeout.
+     * <p>A unified one-button "Register/Login" dialog is re-opened repeatedly
+     * until clicked or timeout.
      */
     public void startChoiceStage(Player player) {
         stopFlow(player);
@@ -116,7 +115,6 @@ public class FlowManager {
         }
         long timeoutMillis = timeoutTicks * 50L;
         long shownAt = System.currentTimeMillis();
-        boolean authMeHooked = plugin.getAuthMeHook().isHooked();
 
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             if (!player.isOnline()) {
@@ -127,13 +125,7 @@ public class FlowManager {
                 stopFlow(player);
                 return;
             }
-            boolean needsRegistration =
-                    authMeHooked && !plugin.getAuthMeHook().isRegistered(player);
-            if (needsRegistration) {
-                plugin.getDialogManager().openRegisterChoiceDialog(player);
-            } else {
-                plugin.getDialogManager().openLoginChoiceDialog(player);
-            }
+            plugin.getDialogManager().openJoinAutoChoiceDialog(player);
         }, SPAM_INTERVAL_TICKS, SPAM_INTERVAL_TICKS);
 
         spamTasks.put(player.getUniqueId(), task);

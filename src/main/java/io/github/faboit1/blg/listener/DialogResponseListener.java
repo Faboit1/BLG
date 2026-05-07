@@ -7,23 +7,16 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
 /**
- * Guards the internal {@code /blg_login_submit} and
- * {@code /blg_register_submit} commands from being run directly in chat.
+ * Intercepts internal {@code /blg_*} commands before AuthMe command blocking.
  *
- * <p>The dialog API sends the command template as a normal command; there is
- * no way at the packet level to distinguish a dialog-submitted command from a
- * manually typed one.  As a lightweight protection layer this listener logs a
- * warning when either internal command appears to have been typed by the
- * player without a prior dialog interaction.
- *
- * <p>No rate-limiting or blocking is applied here because the commands
- * themselves are harmless – they merely call {@code /login} or
- * {@code /register} which AuthMe already rate-limits.
+ * <p>AuthMe can cancel unknown commands for unauthenticated players during
+ * preprocess, which would prevent dialog buttons that run internal BLG
+ * commands from working. We cancel those preprocess events at LOWEST and
+ * dispatch the command directly through Bukkit's command map.
  */
 public class DialogResponseListener implements Listener {
 
-    private static final String CMD_LOGIN_SUBMIT    = "/blg_login_submit";
-    private static final String CMD_REGISTER_SUBMIT = "/blg_register_submit";
+    private static final String INTERNAL_PREFIX = "/blg_";
 
     private final BLGPlugin plugin;
 
@@ -32,19 +25,18 @@ public class DialogResponseListener implements Listener {
     }
 
     /**
-     * Intercepts command preprocessing so we can detect if a player somehow
-     * types an internal BLG command directly in chat (e.g. trying to bypass
-     * the dialog step).  We let the command through regardless – AuthMe is
-     * the actual security layer.
+     * Intercepts command preprocessing so internal BLG commands from dialog
+     * actions are not blocked by AuthMe before they reach command executors.
      */
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
-        String msg = event.getMessage().toLowerCase();
-        if (msg.startsWith(CMD_LOGIN_SUBMIT) || msg.startsWith(CMD_REGISTER_SUBMIT)) {
-            plugin.getLogger().fine(
-                    "Internal BLG submit command used by "
-                    + event.getPlayer().getName()
-                    + ": " + event.getMessage());
+        String message = event.getMessage();
+        if (message == null || !message.regionMatches(true, 0, INTERNAL_PREFIX, 0, INTERNAL_PREFIX.length())) {
+            return;
         }
+
+        event.setCancelled(true);
+        String commandLine = message.startsWith("/") ? message.substring(1) : message;
+        plugin.getServer().dispatchCommand(event.getPlayer(), commandLine);
     }
 }

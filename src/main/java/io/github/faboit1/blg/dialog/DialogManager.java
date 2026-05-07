@@ -82,7 +82,7 @@ public class DialogManager {
      * Opens the login dialog for the given player.
      *
      * <p>When the player clicks "Login" the client runs:
-     * <pre>/blg_login_submit $(password)</pre>
+     * <pre>/login $(password)</pre>
      */
     public void openLoginDialog(Player player) {
         String title   = plugin.cfg("dialog.login-title");
@@ -98,7 +98,7 @@ public class DialogManager {
                         new String[]{"password"},
                         new boolean[]{true},
                         new String[]{pwLabel},
-                        "/blg_login_submit $(password)",
+                        "/login $(password)",
                         button, cancel);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
@@ -116,7 +116,7 @@ public class DialogManager {
      * Opens the register dialog for the given player.
      *
      * <p>When the player clicks "Register" the client runs:
-     * <pre>/blg_register_submit $(password) $(confirmPassword)</pre>
+     * <pre>/register $(password) $(confirmPassword)</pre>
      */
     public void openRegisterDialog(Player player) {
         String title        = plugin.cfg("dialog.register-title");
@@ -133,7 +133,7 @@ public class DialogManager {
                         new String[]{"password", "confirmPassword"},
                         new boolean[]{true, true},
                         new String[]{pwLabel, confirmLabel},
-                        "/blg_register_submit $(password) $(confirmPassword)",
+                        "/register $(password) $(confirmPassword)",
                         button, cancel);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
