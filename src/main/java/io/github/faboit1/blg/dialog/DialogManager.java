@@ -40,6 +40,8 @@ public class DialogManager {
     private static final int SUBMIT_BUTTON_WIDTH = 200;
     private static final int CANCEL_BUTTON_WIDTH = 100;
     private static final int MAX_INPUT_LENGTH = 100;
+    // Attempt order: most likely names first based on Paper snapshots and
+    // potential API naming variations exposed through reflection.
     private static final List<String> PASSWORD_MASKING_METHODS = Arrays.asList(
             "obfuscated",
             "password",
@@ -161,7 +163,10 @@ public class DialogManager {
                                     String submitLabel, String cancelLabel)
             throws Exception {
         if (inputKeys.length != inputLabels.length || inputKeys.length != passwordInputs.length) {
-            throw new IllegalArgumentException("Input metadata length mismatch.");
+            throw new IllegalArgumentException(
+                    "Input metadata length mismatch: keys=" + inputKeys.length
+                            + ", labels=" + inputLabels.length
+                            + ", passwordInputs=" + passwordInputs.length);
         }
 
         boolean passwordMaskingEnabled = plugin.getConfig().getBoolean("dialog.password-masking-enabled", true);
@@ -310,6 +315,8 @@ public class DialogManager {
         } catch (NoSuchMethodException ignored) {
             return null;
         } catch (Exception e) {
+            // `showCharacters(false)` is a fallback probe and can fail on many
+            // builds where the API simply does not expose it, so keep noise low.
             Level level = method.equals("showCharacters") ? Level.FINE : Level.WARNING;
             plugin.getLogger().log(level,
                     "Failed to apply password masking method '" + method + "': " + e.getMessage(), e);
