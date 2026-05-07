@@ -64,12 +64,7 @@ public class OpenAutoCommand implements CommandExecutor {
         }
 
         player.sendMessage(plugin.msg("auto-prompt"));
-
-        if (plugin.getAuthMeHook().isRegistered(player)) {
-            plugin.getDialogManager().openLoginDialog(player);
-        } else {
-            plugin.getDialogManager().openRegisterDialog(player);
-        }
+        plugin.getDialogManager().openAutoAuthDialog(player);
 
         return true;
     }

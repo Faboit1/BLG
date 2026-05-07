@@ -44,6 +44,10 @@ commands:
     description: Internal – called by the register-stub dialog button; opens the actual register form.
     usage: /blg_register_choice
     permission: blg.internal
+  blg_auto_choice:
+    description: Internal – called by the on-join choice button; opens login/register automatically.
+    usage: /blg_auto_choice
+    permission: blg.internal
   blg_rules_accept:
     description: Internal – called by the rules accept button.
     usage: /blg_rules_accept

@@ -17,8 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li><b>RULES</b> – player must accept the current rules (if enabled and not
  *       yet accepted).  A dialog is spammed every 100 ms with a 15-second
  *       countdown before the Accept / Leave buttons become effective.</li>
- *   <li><b>CHOICE</b> – player sees a one-button "Login / Register" dialog
- *       spammed every 100 ms until clicked.</li>
+ *   <li><b>CHOICE</b> – player sees a one-button "Register / Login" dialog
+ *       spammed every 100 ms until clicked or until the timeout is reached.</li>
  *   <li><b>AUTH</b> – the actual login or register dialog has been opened.  No
  *       more spam; AuthMe takes over from here.</li>
  * </ol>
@@ -101,31 +101,31 @@ public class FlowManager {
     }
 
     /**
-     * Begins the choice-dialog spam stage.
+     * Begins the unified on-join choice-dialog spam stage.
      *
-     * <p>The dialog shown depends on whether the player is already registered
-     * in AuthMe:
-     * <ul>
-     *   <li>Registered → login-stub dialog (single "Login" button)</li>
-     *   <li>Not registered → register-stub dialog (single "Register" button)</li>
-     * </ul>
+     * <p>The same one-button dialog is shown regardless of registration state.
+     * Clicking that button stops spam and opens the real auth dialog selected
+     * automatically by AuthMe state.
      */
     public void startChoiceStage(Player player) {
         stopFlow(player);
-
-        boolean isRegistered = plugin.getAuthMeHook().isHooked()
-                && plugin.getAuthMeHook().isRegistered(player);
+        long timeoutTicks = plugin.getConfig().getLong("join-choice-timeout-ticks", 160L);
+        if (timeoutTicks < 1L) {
+            timeoutTicks = 160L;
+        }
+        long timeoutMillis = timeoutTicks * 50L;
+        long shownAt = System.currentTimeMillis();
 
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             if (!player.isOnline()) {
                 stopFlow(player);
                 return;
             }
-            if (isRegistered) {
-                plugin.getDialogManager().openLoginChoiceDialog(player);
-            } else {
-                plugin.getDialogManager().openRegisterChoiceDialog(player);
+            if (System.currentTimeMillis() - shownAt >= timeoutMillis) {
+                stopFlow(player);
+                return;
             }
+            plugin.getDialogManager().openJoinAutoChoiceDialog(player);
         }, SPAM_INTERVAL_TICKS, SPAM_INTERVAL_TICKS);
 
         spamTasks.put(player.getUniqueId(), task);

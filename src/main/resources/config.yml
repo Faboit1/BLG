@@ -46,8 +46,17 @@ auto-open-on-join: false
 # Default: 20 ticks = 1 second.
 join-dialog-delay-ticks: 20
 
+# How long to keep re-sending the on-join choice dialog before stopping.
+# Default: 160 ticks = 8 seconds.
+join-choice-timeout-ticks: 160
+
 dialog:
   # All dialog text below supports legacy color codes via &
+
+  # --- Unified on-join choice dialog (shown when autojoinlogingui is enabled) ---
+  join-choice-title: "&lWelcome!"
+  join-choice-body: "&7Click the button below to continue."
+  join-choice-button: "&aRegister/Login"
 
   # --- Login-stub dialog (shown to registered players before the actual login form) ---
   login-choice-title: "&lWelcome back!"
@@ -106,4 +115,3 @@ rules:
     enabled: false
     # How many rules lines to show per page when pages are enabled.
     lines-per-page: 10
-

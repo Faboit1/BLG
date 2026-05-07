@@ -169,10 +169,10 @@ public class DialogManager {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to open login-choice dialog for " + player.getName()
                         + ": " + e.getMessage(), e);
-                openAuthFallback(player);
+                openAutoAuthDialog(player);
             }
         } else {
-            openAuthFallback(player);
+            openAutoAuthDialog(player);
         }
     }
 
@@ -199,10 +199,50 @@ public class DialogManager {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to open register-choice dialog for " + player.getName()
                         + ": " + e.getMessage(), e);
-                openAuthFallback(player);
+                openAutoAuthDialog(player);
             }
         } else {
-            openAuthFallback(player);
+            openAutoAuthDialog(player);
+        }
+    }
+
+    /**
+     * Opens the unified on-join choice dialog with a single "Register/Login" button.
+     *
+     * <p>When clicked the client runs {@code /blg_auto_choice}, which stops
+     * on-join spam and opens the actual login/register dialog chosen by AuthMe state.
+     */
+    public void openJoinAutoChoiceDialog(Player player) {
+        String title  = plugin.cfg("dialog.join-choice-title");
+        String body   = plugin.cfg("dialog.join-choice-body");
+        String button = plugin.cfg("dialog.join-choice-button");
+
+        if (dialogApiAvailable) {
+            try {
+                Object dialog = buildButtonOnlyDialog(
+                        title, body,
+                        List.<String[]>of(new String[]{button, "/blg_auto_choice"}),
+                        null, null);
+                showDialogReflective(player, dialog);
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Failed to open join-choice dialog for " + player.getName()
+                                + ": " + e.getMessage(), e);
+                openAutoAuthDialog(player);
+            }
+        } else {
+            openAutoAuthDialog(player);
+        }
+    }
+
+    /**
+     * Opens login or register automatically based on AuthMe registration state.
+     */
+    public void openAutoAuthDialog(Player player) {
+        if (plugin.getAuthMeHook().isHooked() && !plugin.getAuthMeHook().isRegistered(player)) {
+            openRegisterDialog(player);
+        } else {
+            openLoginDialog(player);
         }
     }
 
@@ -591,14 +631,6 @@ public class DialogManager {
      * Fallback when the Dialog API is unavailable and a player needs to go
      * through the auth flow: directly open the appropriate auth dialog.
      */
-    private void openAuthFallback(Player player) {
-        if (plugin.getAuthMeHook().isHooked() && !plugin.getAuthMeHook().isRegistered(player)) {
-            openRegisterDialog(player);
-        } else {
-            openLoginDialog(player);
-        }
-    }
-
     /**
      * Sends the rules as chat messages when the Dialog API is unavailable.
      * Called at most once per spam tick – the caller should stop spamming
