@@ -1,17 +1,13 @@
 package io.github.faboit1.blg.dialog;
 
 import io.github.faboit1.blg.BLGPlugin;
-import io.papermc.paper.dialog.Dialog;
-import io.papermc.paper.registry.data.dialog.ActionButton;
-import io.papermc.paper.registry.data.dialog.DialogBase;
-import io.papermc.paper.registry.data.dialog.action.DialogAction;
-import io.papermc.paper.registry.data.dialog.body.DialogBody;
-import io.papermc.paper.registry.data.dialog.input.DialogInput;
-import io.papermc.paper.registry.data.dialog.type.DialogType;
+import net.kyori.adventure.dialog.DialogLike;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 
 /**
@@ -20,8 +16,8 @@ import java.util.logging.Level;
  * <h2>How the Dialog API works</h2>
  * The Minecraft Dialog API (introduced in 1.21.5 / 25w17a) lets servers open
  * a rich, form-like GUI in the client without requiring a resource-pack or
- * mod.  Paper exposes this through {@link Dialog#create} and
- * {@link Player#showDialog}.
+ * mod.  Paper exposes this through {@code Dialog.create} and
+ * {@code Player#showDialog}.
  *
  * <p>When a player fills in text inputs and presses a submit button the
  * client runs the command template stored in the button's action, substituting
@@ -29,19 +25,20 @@ import java.util.logging.Level;
  * The server receives a perfectly ordinary command, so no special packet
  * listener is required to handle the response.
  *
- * <h2>Dialog structure</h2>
- * Each dialog is built from:
- * <ul>
- *   <li>{@link DialogBase} – title, body text, and input fields</li>
- *   <li>{@link DialogType} – button layout (we use {@code multiAction})</li>
- *   <li>{@link ActionButton} – labelled button with a command template action</li>
- *   <li>{@link DialogAction#commandTemplate} – {@code $(key)} substitution syntax</li>
- * </ul>
+ * <h2>Compile-time independence</h2>
+ * The Paper Dialog API packages ({@code io.papermc.paper.dialog.*} and
+ * {@code io.papermc.paper.registry.data.dialog.*}) may not be present in all
+ * paper-api snapshot builds that the CI resolves.  All Dialog-specific classes
+ * are therefore loaded at runtime via reflection so that the plugin compiles
+ * cleanly regardless of which snapshot is available.  On Paper 1.21.5+ servers
+ * the API is present and reflection succeeds; on older builds we fall back to
+ * a chat-based prompt.
  */
 public class DialogManager {
 
     private static final int SUBMIT_BUTTON_WIDTH = 200;
     private static final int CANCEL_BUTTON_WIDTH = 100;
+    private static final int MAX_INPUT_LENGTH = 100;
 
     private final BLGPlugin plugin;
 
@@ -72,29 +69,12 @@ public class DialogManager {
 
         if (dialogApiAvailable) {
             try {
-                Dialog dialog = Dialog.create(factory -> factory.empty()
-                        .base(DialogBase.builder(Component.text(stripColor(title)))
-                                .body(List.of(
-                                        DialogBody.plainMessage(Component.text(stripColor(body)))))
-                                .inputs(List.of(
-                                        DialogInput.text("password",
-                                                        Component.text(stripColor(pwLabel)))
-                                                .labelVisible(true)
-                                                .maxLength(100)
-                                                .build()))
-                                .canCloseWithEscape(false)
-                                .afterAction(DialogBase.DialogAfterAction.CLOSE)
-                                .build())
-                        .type(DialogType.multiAction(List.of(
-                                        ActionButton.create(
-                                                Component.text(stripColor(button)),
-                                                null, SUBMIT_BUTTON_WIDTH,
-                                                DialogAction.commandTemplate(
-                                                        "/blg_login_submit $(password)"))))
-                                .exitAction(ActionButton.create(
-                                        Component.text(stripColor(cancel)),
-                                        null, CANCEL_BUTTON_WIDTH, null))
-                                .build()));
+                DialogLike dialog = buildDialog(
+                        title, body,
+                        new String[]{"password"},
+                        new String[]{pwLabel},
+                        "/blg_login_submit $(password)",
+                        button, cancel);
                 player.showDialog(dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -123,34 +103,12 @@ public class DialogManager {
 
         if (dialogApiAvailable) {
             try {
-                Dialog dialog = Dialog.create(factory -> factory.empty()
-                        .base(DialogBase.builder(Component.text(stripColor(title)))
-                                .body(List.of(
-                                        DialogBody.plainMessage(Component.text(stripColor(body)))))
-                                .inputs(List.of(
-                                        DialogInput.text("password",
-                                                        Component.text(stripColor(pwLabel)))
-                                                .labelVisible(true)
-                                                .maxLength(100)
-                                                .build(),
-                                        DialogInput.text("confirmPassword",
-                                                        Component.text(stripColor(confirmLabel)))
-                                                .labelVisible(true)
-                                                .maxLength(100)
-                                                .build()))
-                                .canCloseWithEscape(false)
-                                .afterAction(DialogBase.DialogAfterAction.CLOSE)
-                                .build())
-                        .type(DialogType.multiAction(List.of(
-                                        ActionButton.create(
-                                                Component.text(stripColor(button)),
-                                                null, SUBMIT_BUTTON_WIDTH,
-                                                DialogAction.commandTemplate(
-                                                        "/blg_register_submit $(password) $(confirmPassword)"))))
-                                .exitAction(ActionButton.create(
-                                        Component.text(stripColor(cancel)),
-                                        null, CANCEL_BUTTON_WIDTH, null))
-                                .build()));
+                DialogLike dialog = buildDialog(
+                        title, body,
+                        new String[]{"password", "confirmPassword"},
+                        new String[]{pwLabel, confirmLabel},
+                        "/blg_register_submit $(password) $(confirmPassword)",
+                        button, cancel);
                 player.showDialog(dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -164,12 +122,132 @@ public class DialogManager {
     }
 
     // -----------------------------------------------------------------------
+    // Dialog building via reflection
+    // (All io.papermc.paper.dialog.* classes are loaded dynamically so that
+    //  the plugin compiles against paper-api snapshots that may not yet
+    //  include the Dialog API packages.)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Constructs a dialog using Paper's Dialog API loaded entirely via
+     * reflection.  The returned object implements
+     * {@link net.kyori.adventure.dialog.DialogLike} which IS present in the
+     * adventure-api bundled with all paper-api 1.21.5 snapshots.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private DialogLike buildDialog(String title, String bodyText,
+                                   String[] inputKeys, String[] inputLabels,
+                                   String commandTemplate,
+                                   String submitLabel, String cancelLabel)
+            throws Exception {
+
+        // ----- Load Paper Dialog API classes via reflection -----
+        Class<?> dialogBaseClass   = Class.forName("io.papermc.paper.registry.data.dialog.DialogBase");
+        Class<?> dialogBodyClass   = Class.forName("io.papermc.paper.registry.data.dialog.body.DialogBody");
+        Class<?> dialogInputClass  = Class.forName("io.papermc.paper.registry.data.dialog.input.DialogInput");
+        Class<?> dialogTypeClass   = Class.forName("io.papermc.paper.registry.data.dialog.type.DialogType");
+        Class<?> actionButtonClass = Class.forName("io.papermc.paper.registry.data.dialog.ActionButton");
+        Class<?> dialogActionClass = Class.forName("io.papermc.paper.registry.data.dialog.action.DialogAction");
+        Class<?> afterActionEnum   = Class.forName("io.papermc.paper.registry.data.dialog.DialogBase$DialogAfterAction");
+        Class<?> providerClass     = Class.forName("io.papermc.paper.registry.data.InlinedRegistryBuilderProvider");
+
+        // ----- Build DialogBase -----
+        Object baseBuilder = dialogBaseClass
+                .getMethod("builder", Component.class)
+                .invoke(null, Component.text(strip(title)));
+
+        Object bodyEntry = dialogBodyClass
+                .getMethod("plainMessage", Component.class)
+                .invoke(null, Component.text(strip(bodyText)));
+        baseBuilder = call(baseBuilder, "body", List.class, List.of(bodyEntry));
+        baseBuilder = call(baseBuilder, "canCloseWithEscape", boolean.class, false);
+
+        Object closeAction = Enum.valueOf((Class<Enum>) afterActionEnum, "CLOSE");
+        baseBuilder = baseBuilder.getClass()
+                .getMethod("afterAction", afterActionEnum)
+                .invoke(baseBuilder, closeAction);
+
+        // ----- Build text inputs -----
+        List<Object> inputs = new ArrayList<>(inputKeys.length);
+        for (int i = 0; i < inputKeys.length; i++) {
+            Object inputBuilder = dialogInputClass
+                    .getMethod("text", String.class, Component.class)
+                    .invoke(null, inputKeys[i], Component.text(strip(inputLabels[i])));
+            inputBuilder = call(inputBuilder, "labelVisible", boolean.class, true);
+            inputBuilder = call(inputBuilder, "maxLength", int.class, MAX_INPUT_LENGTH);
+            inputs.add(inputBuilder.getClass().getMethod("build").invoke(inputBuilder));
+        }
+        baseBuilder = call(baseBuilder, "inputs", List.class, inputs);
+
+        Object dialogBase = baseBuilder.getClass().getMethod("build").invoke(baseBuilder);
+
+        // ----- Build submit button -----
+        Object cmdAction = dialogActionClass
+                .getMethod("commandTemplate", String.class)
+                .invoke(null, commandTemplate);
+        Object submitBtn = actionButtonClass
+                .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
+                .invoke(null, Component.text(strip(submitLabel)), null, SUBMIT_BUTTON_WIDTH, cmdAction);
+
+        // ----- Build cancel button (null action = just closes) -----
+        Object cancelBtn = actionButtonClass
+                .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
+                .invoke(null, Component.text(strip(cancelLabel)), null, CANCEL_BUTTON_WIDTH, null);
+
+        // ----- Build DialogType (multiAction) -----
+        Object typeBuilder = dialogTypeClass
+                .getMethod("multiAction", List.class)
+                .invoke(null, List.of(submitBtn));
+        typeBuilder = typeBuilder.getClass()
+                .getMethod("exitAction", actionButtonClass)
+                .invoke(typeBuilder, cancelBtn);
+        Object dialogType = typeBuilder.getClass().getMethod("build").invoke(typeBuilder);
+
+        // ----- Create Dialog via InlinedRegistryBuilderProvider -----
+        // Dialog.create() delegates to InlinedRegistryBuilderProvider.instance().createDialog(consumer).
+        // The Consumer accepts a RegistryBuilderFactory; at runtime the generic types are erased,
+        // so we can pass a Consumer<Object> cast to raw Consumer.
+        Object provider = providerClass.getMethod("instance").invoke(null);
+
+        final Object finalBase = dialogBase;
+        final Object finalType = dialogType;
+        final Class<?> finalBaseClass = dialogBaseClass;
+        final Class<?> finalTypeClass = dialogTypeClass;
+
+        Consumer<Object> factoryConsumer = factory -> {
+            try {
+                Object entryBuilder = factory.getClass().getMethod("empty").invoke(factory);
+                entryBuilder = entryBuilder.getClass()
+                        .getMethod("base", finalBaseClass)
+                        .invoke(entryBuilder, finalBase);
+                entryBuilder.getClass()
+                        .getMethod("type", finalTypeClass)
+                        .invoke(entryBuilder, finalType);
+            } catch (Exception ex) {
+                throw new RuntimeException("Dialog builder consumer failed", ex);
+            }
+        };
+
+        Object dialog = providerClass
+                .getMethod("createDialog", Consumer.class)
+                .invoke(provider, factoryConsumer);
+
+        return (DialogLike) dialog;
+    }
+
+    /** Calls a single-argument method by name on {@code obj} and returns the result. */
+    private static Object call(Object obj, String method, Class<?> paramType, Object arg)
+            throws Exception {
+        return obj.getClass().getMethod(method, paramType).invoke(obj, arg);
+    }
+
+    // -----------------------------------------------------------------------
     // Utilities
     // -----------------------------------------------------------------------
 
     /**
-     * Checks at startup whether the Paper Dialog API is available on this
-     * server build, so we can fall back gracefully on older builds.
+     * Returns {@code true} if the Paper Dialog API is available at runtime.
+     * We probe for the {@code Dialog} class in the paper-specific package.
      */
     private boolean probeDialogApi() {
         try {
@@ -186,7 +264,7 @@ public class DialogManager {
     }
 
     /** Strips Bukkit legacy colour codes from a string. */
-    private String stripColor(String text) {
+    private String strip(String text) {
         return org.bukkit.ChatColor.stripColor(text);
     }
 
@@ -195,3 +273,4 @@ public class DialogManager {
         player.sendMessage(plugin.msg(messageKey));
     }
 }
+
