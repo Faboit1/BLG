@@ -28,10 +28,7 @@ messages:
   # Shown when register passwords do not match
   password-mismatch: "&cPasswords do not match. Please try again."
   login-failed: "&cLogin failed. Please try again."
-  login-incorrect-password: "&cIncorrect password."
-  login-not-registered: "&cNo account was found. Please register first."
   register-failed: "&cRegistration failed. Please try again."
-  register-already-registered: "&cYou already have an account. Please log in."
 
   # Shown as the kick message when a player leaves via the rules "Leave Server" button
   rules-leave-kick: "&cYou must accept the server rules to play."

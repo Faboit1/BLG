@@ -25,6 +25,7 @@ import org.bukkit.entity.Player;
  */
 public class RegisterSubmitCommand implements CommandExecutor {
 
+    /** Wait 2 ticks (~100 ms) so AuthMe can finish processing before we retry the dialog. */
     private static final long RETRY_DELAY_TICKS = 2L;
 
     private final BLGPlugin plugin;
@@ -58,18 +59,15 @@ public class RegisterSubmitCommand implements CommandExecutor {
             return true;
         }
 
-        String failureMessage = plugin.msg("register-failed");
-        if (plugin.getAuthMeHook().isHooked() && plugin.getAuthMeHook().isRegistered(player)) {
-            failureMessage = plugin.msg("register-already-registered");
-        }
-
         player.performCommand("register " + password + " " + confirmPassword);
-        String finalFailureMessage = failureMessage;
+        String finalFailureMessage = plugin.msg("register-failed");
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline()) {
                 return;
             }
             if (plugin.getAuthMeHook().isHooked()
+                    // Treat a newly-created account as success even on setups
+                    // where AuthMe does not auto-login immediately after /register.
                     && (plugin.getAuthMeHook().isAuthenticated(player)
                     || plugin.getAuthMeHook().isRegistered(player))) {
                 plugin.getFlowManager().clearPlayer(player);

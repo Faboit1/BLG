@@ -24,6 +24,7 @@ import org.bukkit.entity.Player;
  */
 public class LoginSubmitCommand implements CommandExecutor {
 
+    /** Wait 2 ticks (~100 ms) so AuthMe can finish processing before we retry the dialog. */
     private static final long RETRY_DELAY_TICKS = 2L;
 
     private final BLGPlugin plugin;
@@ -47,17 +48,6 @@ public class LoginSubmitCommand implements CommandExecutor {
 
         String password = String.join(" ", args);
         String failureMessage = plugin.msg("login-failed");
-
-        if (plugin.getAuthMeHook().isHooked()) {
-            if (!plugin.getAuthMeHook().isRegistered(player)) {
-                failureMessage = plugin.msg("login-not-registered");
-            } else {
-                Boolean passwordMatches = plugin.getAuthMeHook().checkPassword(player, password);
-                if (Boolean.FALSE.equals(passwordMatches)) {
-                    failureMessage = plugin.msg("login-incorrect-password");
-                }
-            }
-        }
 
         player.performCommand("login " + password);
         String finalFailureMessage = failureMessage;
