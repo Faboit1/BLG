@@ -17,8 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li><b>RULES</b> – player must accept the current rules (if enabled and not
  *       yet accepted).  A dialog is spammed every 100 ms with a 15-second
  *       countdown before the Accept / Leave buttons become effective.</li>
- *   <li><b>CHOICE</b> – player sees a one-button "Register / Login" dialog
- *       spammed every 100 ms until clicked or until the timeout is reached.</li>
+ *   <li><b>CHOICE</b> – player sees a one-button "Open Login" or
+ *       "Open Register" dialog (based on AuthMe registration state), spammed
+ *       every 100 ms until clicked or until the timeout is reached.</li>
  *   <li><b>AUTH</b> – the actual login or register dialog has been opened.  No
  *       more spam; AuthMe takes over from here.</li>
  * </ol>
@@ -101,11 +102,11 @@ public class FlowManager {
     }
 
     /**
-     * Begins the unified on-join choice-dialog spam stage.
+     * Begins the on-join choice-dialog spam stage.
      *
-     * <p>The same one-button dialog is shown regardless of registration state.
-     * Clicking that button stops spam and opens the real auth dialog selected
-     * automatically by AuthMe state.
+     * <p>A one-button "Open Login" or "Open Register" dialog is chosen from
+     * current AuthMe registration state and re-opened repeatedly until clicked
+     * or timeout.
      */
     public void startChoiceStage(Player player) {
         stopFlow(player);
@@ -125,7 +126,11 @@ public class FlowManager {
                 stopFlow(player);
                 return;
             }
-            plugin.getDialogManager().openJoinAutoChoiceDialog(player);
+            if (plugin.getAuthMeHook().isHooked() && !plugin.getAuthMeHook().isRegistered(player)) {
+                plugin.getDialogManager().openRegisterChoiceDialog(player);
+            } else {
+                plugin.getDialogManager().openLoginChoiceDialog(player);
+            }
         }, SPAM_INTERVAL_TICKS, SPAM_INTERVAL_TICKS);
 
         spamTasks.put(player.getUniqueId(), task);

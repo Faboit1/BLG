@@ -61,12 +61,12 @@ dialog:
   # --- Login-stub dialog (shown to registered players before the actual login form) ---
   login-choice-title: "&lWelcome back!"
   login-choice-body: "&7Click the button below to log in to the server."
-  login-choice-button: "&aLogin"
+  login-choice-button: "&aOPEN LOGIN"
 
   # --- Register-stub dialog (shown to new players before the actual register form) ---
   register-choice-title: "&lWelcome!"
   register-choice-body: "&7It looks like you don't have an account yet.\n&7Click the button below to create one."
-  register-choice-button: "&aRegister"
+  register-choice-button: "&aOPEN REGISTER"
 
   # --- Login dialog ---
   login-title: "&lLogin"
