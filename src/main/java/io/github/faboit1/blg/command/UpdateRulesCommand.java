@@ -23,7 +23,7 @@ public class UpdateRulesCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command,
                              String label, String[] args) {
         if (!sender.hasPermission("blg.admin")) {
-            sender.sendMessage(plugin.msg("no-permission-others"));
+            sender.sendMessage(plugin.msg("no-permission"));
             return true;
         }
 

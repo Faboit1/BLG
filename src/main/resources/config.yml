@@ -14,6 +14,7 @@ messages:
   openauto-usage: "&cUsage: /openauto or /openauto <player> &7(requires permission for other players)"
   openauto-console-usage: "&cConsole must use /openauto <player>."
   no-permission-others: "&cYou do not have permission to open the login GUI for other players."
+  no-permission: "&cYou do not have permission to use this command."
   player-not-found: "&cThat player is not online."
   force-opened-login: "&aOpened the login dialog for &e%player%&a."
 

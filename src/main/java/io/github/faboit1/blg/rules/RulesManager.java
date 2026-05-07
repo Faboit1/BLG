@@ -8,6 +8,8 @@ import org.bukkit.entity.Player;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -155,11 +157,27 @@ public class RulesManager {
                     rawLines.add(line);
                 }
             }
-            currentHash = String.valueOf(String.join("\n", rawLines).hashCode());
+            currentHash = sha256(String.join("\n", rawLines));
         } catch (IOException e) {
             plugin.getLogger().log(Level.WARNING, "Could not read rules.txt", e);
             rawLines = new ArrayList<>();
             currentHash = "";
+        }
+    }
+
+    /** Computes a stable SHA-256 hex digest of the given content. */
+    private static String sha256(String content) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = md.digest(content.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(bytes.length * 2);
+            for (byte b : bytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 is required by the Java SE spec – should never happen
+            return String.valueOf(content.hashCode());
         }
     }
 

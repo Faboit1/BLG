@@ -31,6 +31,9 @@ public class FlowManager {
     /** How often (in ticks) to re-send the current dialog.  2 ticks ≈ 100 ms. */
     private static final long SPAM_INTERVAL_TICKS = 2L;
 
+    /** Default number of rules lines shown per page when the page system is enabled. */
+    private static final int DEFAULT_LINES_PER_PAGE = 10;
+
     private final BLGPlugin plugin;
 
     /** Active spam task per player. */
@@ -81,7 +84,13 @@ public class FlowManager {
                 stopFlow(player);
                 return;
             }
-            long elapsed    = System.currentTimeMillis() - rulesShownAt.getOrDefault(player.getUniqueId(), 0L);
+            Long shownAt = rulesShownAt.get(player.getUniqueId());
+            if (shownAt == null) {
+                // Should never happen, but guard against it to avoid incorrect canAct state
+                stopFlow(player);
+                return;
+            }
+            long elapsed    = System.currentTimeMillis() - shownAt;
             boolean canAct  = elapsed >= (long) waitSeconds * 1000L;
             int secondsLeft = canAct ? 0 : (int) Math.max(0, waitSeconds - elapsed / 1000L);
             int page        = rulesPage.getOrDefault(player.getUniqueId(), 0);
@@ -161,8 +170,8 @@ public class FlowManager {
      */
     public int getTotalPages() {
         int lineCount    = plugin.getRulesManager().getLineCount();
-        int linesPerPage = plugin.getConfig().getInt("rules.pages.lines-per-page", 10);
-        if (linesPerPage < 1) linesPerPage = 10;
+        int linesPerPage = plugin.getConfig().getInt("rules.pages.lines-per-page", DEFAULT_LINES_PER_PAGE);
+        if (linesPerPage < 1) linesPerPage = DEFAULT_LINES_PER_PAGE;
         return Math.max(1, (int) Math.ceil((double) lineCount / linesPerPage));
     }
 
@@ -176,11 +185,13 @@ public class FlowManager {
         if (!pagesEnabled) {
             return all;
         }
-        int linesPerPage = plugin.getConfig().getInt("rules.pages.lines-per-page", 10);
-        if (linesPerPage < 1) linesPerPage = 10;
-        int from = page * linesPerPage;
+        int linesPerPage = plugin.getConfig().getInt("rules.pages.lines-per-page", DEFAULT_LINES_PER_PAGE);
+        if (linesPerPage < 1) linesPerPage = DEFAULT_LINES_PER_PAGE;
+        int totalPages = Math.max(1, (int) Math.ceil((double) all.size() / linesPerPage));
+        // Clamp page to valid range
+        int safePage = Math.max(0, Math.min(page, totalPages - 1));
+        int from = safePage * linesPerPage;
         int to   = Math.min(from + linesPerPage, all.size());
-        if (from >= all.size()) return all.subList(Math.max(0, all.size() - linesPerPage), all.size());
         return all.subList(from, to);
     }
 }
