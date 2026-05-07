@@ -116,6 +116,7 @@ public class FlowManager {
         }
         long timeoutMillis = timeoutTicks * 50L;
         long shownAt = System.currentTimeMillis();
+        boolean authMeHooked = plugin.getAuthMeHook().isHooked();
 
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             if (!player.isOnline()) {
@@ -126,9 +127,9 @@ public class FlowManager {
                 stopFlow(player);
                 return;
             }
-            boolean showRegisterChoice =
-                    plugin.getAuthMeHook().isHooked() && !plugin.getAuthMeHook().isRegistered(player);
-            if (showRegisterChoice) {
+            boolean needsRegistration =
+                    authMeHooked && !plugin.getAuthMeHook().isRegistered(player);
+            if (needsRegistration) {
                 plugin.getDialogManager().openRegisterChoiceDialog(player);
             } else {
                 plugin.getDialogManager().openLoginChoiceDialog(player);
