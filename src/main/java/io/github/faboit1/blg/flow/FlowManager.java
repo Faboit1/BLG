@@ -10,13 +10,16 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages the per-player login flow and dialog-spam tasks.
+ * Manages the per-player login flow and dialog tasks.
  *
  * <h2>Flow stages</h2>
  * <ol>
  *   <li><b>RULES</b> – player must accept the current rules (if enabled and not
- *       yet accepted).  A dialog is spammed every 100 ms with a 15-second
- *       countdown before the Accept / Leave buttons become effective.</li>
+ *       yet accepted).  The rules dialog is sent <em>once</em> with the Accept
+ *       button grayed out (disabled via the Paper Dialog API).  After the
+ *       configured wait time a single scheduled task re-sends the dialog with
+ *       the Accept button enabled.  No repeated spam is used, so the player can
+ *       freely scroll the rules text.</li>
  *   <li><b>CHOICE</b> – player sees a one-button "Open Login" or
  *       "Open Register" dialog (based on AuthMe registration state), spammed
  *       every 100 ms until clicked or until the timeout is reached.</li>
@@ -24,12 +27,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *       more spam; AuthMe takes over from here.</li>
  * </ol>
  *
- * <p>All spam tasks are cancelled automatically when the player quits or when
+ * <p>All tasks are cancelled automatically when the player quits or when
  * {@link #stopFlow(Player)} is called explicitly.
  */
 public class FlowManager {
 
-    /** How often (in ticks) to re-send the current dialog.  2 ticks ≈ 100 ms. */
+    /** How often (in ticks) to re-send the choice dialog.  2 ticks ≈ 100 ms. */
     private static final long SPAM_INTERVAL_TICKS = 2L;
 
     /** Default number of rules lines shown per page when the page system is enabled. */
@@ -37,8 +40,15 @@ public class FlowManager {
 
     private final BLGPlugin plugin;
 
-    /** Active spam task per player. */
+    /** Active choice-stage spam task per player. */
     private final Map<UUID, BukkitTask> spamTasks = new ConcurrentHashMap<>();
+
+    /**
+     * Delayed task that re-sends the rules dialog with the Accept button
+     * enabled after the mandatory wait time elapses.  One entry per player,
+     * cancelled on quit or flow stop.
+     */
+    private final Map<UUID, BukkitTask> unlockTasks = new ConcurrentHashMap<>();
 
     /**
      * The login/register action the player intended when the rules dialog
@@ -52,21 +62,6 @@ public class FlowManager {
 
     /** Current rules page index (0-based) per player. */
     private final Map<UUID, Integer> rulesPage = new ConcurrentHashMap<>();
-
-    /**
-     * Tracks the last {@code secondsLeft} value sent to each player in the
-     * rules dialog.  Used to avoid re-sending the dialog when nothing has
-     * changed, so the client can scroll the rules text freely between updates.
-     * {@code -1} means the dialog has not been sent yet this stage.
-     */
-    private final Map<UUID, Integer> rulesLastSecondsLeft = new ConcurrentHashMap<>();
-
-    /**
-     * Tracks whether the rules dialog was last sent with {@code canAct = true}
-     * for each player.  Together with {@link #rulesLastSecondsLeft}, this lets
-     * the spam task skip re-sending when the visible content hasn't changed.
-     */
-    private final Map<UUID, Boolean> rulesLastCanAct = new ConcurrentHashMap<>();
 
     public FlowManager(BLGPlugin plugin) {
         this.plugin = plugin;
@@ -87,51 +82,36 @@ public class FlowManager {
     }
 
     /**
-     * Begins the rules-spam stage.  Called either by {@link #startFlow} or by
-     * a page-navigation command after the stage is already active (to restart
-     * the task with the updated page).
+     * Begins the rules stage for a player.
+     *
+     * <p>The rules dialog is sent <em>once</em> immediately with the Accept
+     * button disabled (grayed out via the Paper Dialog API).  A single
+     * {@code runTaskLater} task is scheduled to re-send the dialog with the
+     * Accept button enabled after {@code rules.wait-seconds} have elapsed.
+     * No periodic spam is used, so players can freely scroll the rules text.
      */
     public void startRulesStage(Player player) {
         stopFlow(player);
         rulesShownAt.putIfAbsent(player.getUniqueId(), System.currentTimeMillis());
         rulesPage.putIfAbsent(player.getUniqueId(), 0);
-        // Reset tracking so the dialog is sent immediately on the first tick
-        rulesLastSecondsLeft.put(player.getUniqueId(), -1);
-        rulesLastCanAct.put(player.getUniqueId(), false);
 
         int waitSeconds = plugin.getConfig().getInt("rules.wait-seconds", 15);
+        int page        = rulesPage.getOrDefault(player.getUniqueId(), 0);
+        boolean canAct  = (waitSeconds <= 0);
 
-        BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
-            if (!player.isOnline()) {
-                stopFlow(player);
-                return;
-            }
-            Long shownAt = rulesShownAt.get(player.getUniqueId());
-            if (shownAt == null) {
-                // Should never happen, but guard against it to avoid incorrect canAct state
-                stopFlow(player);
-                return;
-            }
-            long elapsed    = System.currentTimeMillis() - shownAt;
-            boolean canAct  = elapsed >= (long) waitSeconds * 1000L;
-            int secondsLeft = canAct ? 0 : (int) Math.max(0, waitSeconds - elapsed / 1000L);
-            int page        = rulesPage.getOrDefault(player.getUniqueId(), 0);
+        // Send dialog once – Accept button is disabled until the wait elapses
+        plugin.getDialogManager().openRulesDialog(player, page, canAct);
 
-            // Only re-send the dialog when its visible content has actually changed
-            // (countdown ticked down, or buttons just became active).  This lets
-            // players scroll the rules text freely between updates.
-            int  lastSec    = rulesLastSecondsLeft.getOrDefault(player.getUniqueId(), -1);
-            boolean lastAct = rulesLastCanAct.getOrDefault(player.getUniqueId(), false);
-            if (secondsLeft == lastSec && canAct == lastAct) {
-                return; // nothing changed – skip this tick
-            }
-
-            rulesLastSecondsLeft.put(player.getUniqueId(), secondsLeft);
-            rulesLastCanAct.put(player.getUniqueId(), canAct);
-            plugin.getDialogManager().openRulesDialog(player, page, canAct, secondsLeft);
-        }, SPAM_INTERVAL_TICKS, SPAM_INTERVAL_TICKS);
-
-        spamTasks.put(player.getUniqueId(), task);
+        if (!canAct) {
+            // Schedule a single task to re-enable the Accept button after the wait
+            BukkitTask unlock = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                unlockTasks.remove(player.getUniqueId());
+                if (!player.isOnline()) return;
+                int currentPage = rulesPage.getOrDefault(player.getUniqueId(), 0);
+                plugin.getDialogManager().openRulesDialog(player, currentPage, true);
+            }, (long) waitSeconds * 20L);
+            unlockTasks.put(player.getUniqueId(), unlock);
+        }
     }
 
     /**
@@ -179,6 +159,8 @@ public class FlowManager {
     public void stopFlow(Player player) {
         BukkitTask task = spamTasks.remove(player.getUniqueId());
         if (task != null) task.cancel();
+        BukkitTask unlock = unlockTasks.remove(player.getUniqueId());
+        if (unlock != null) unlock.cancel();
         // Do NOT remove rulesShownAt here – we need it to stay accurate if
         // the stage restarts (e.g. page navigation).  Full state is cleared
         // in clearPlayer() when the player exits the rules stage entirely.
@@ -191,8 +173,6 @@ public class FlowManager {
         stopFlow(player);
         rulesShownAt.remove(player.getUniqueId());
         rulesPage.remove(player.getUniqueId());
-        rulesLastSecondsLeft.remove(player.getUniqueId());
-        rulesLastCanAct.remove(player.getUniqueId());
         pendingActions.remove(player.getUniqueId());
     }
 
@@ -215,8 +195,10 @@ public class FlowManager {
     /** Updates the rules page for this player (used by page-nav commands). */
     public void setRulesPage(Player player, int page) {
         rulesPage.put(player.getUniqueId(), page);
-        // Force the spam task to re-send the dialog immediately with the new page
-        rulesLastSecondsLeft.put(player.getUniqueId(), -1);
+        // Resend the dialog immediately with the new page content, preserving
+        // the current canAct state so the disabled/enabled button stays correct.
+        boolean canAct = canActOnRules(player);
+        plugin.getDialogManager().openRulesDialog(player, page, canAct);
     }
 
     /** Returns the current rules page index (0-based) for this player. */

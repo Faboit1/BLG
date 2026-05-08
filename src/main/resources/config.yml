@@ -96,13 +96,15 @@ dialog:
   password-masking-enabled: true
 
   # --- Rules dialog ---
-  # %seconds% is replaced with the remaining wait time
+  # Shown in the dialog title bar while players read the rules.
   rules-title: "&6&lServer Rules"
-  rules-wait-title: "&6&lServer Rules &e(wait %seconds%s)"
   rules-accept-button: "&aAccept"
   rules-leave-button: "&cLeave Server"
   rules-prev-button: "&7< Previous"
   rules-next-button: "&7Next >"
+  # Tooltip shown on the grayed-out Accept button while the player must still
+  # wait.  Set to an empty string to show no tooltip.
+  rules-wait-button-tooltip: "&ePlease read the rules before accepting."
 
 # Rules system
 rules:
