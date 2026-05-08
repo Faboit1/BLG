@@ -53,6 +53,21 @@ public class FlowManager {
     /** Current rules page index (0-based) per player. */
     private final Map<UUID, Integer> rulesPage = new ConcurrentHashMap<>();
 
+    /**
+     * Tracks the last {@code secondsLeft} value sent to each player in the
+     * rules dialog.  Used to avoid re-sending the dialog when nothing has
+     * changed, so the client can scroll the rules text freely between updates.
+     * {@code -1} means the dialog has not been sent yet this stage.
+     */
+    private final Map<UUID, Integer> rulesLastSecondsLeft = new ConcurrentHashMap<>();
+
+    /**
+     * Tracks whether the rules dialog was last sent with {@code canAct = true}
+     * for each player.  Together with {@link #rulesLastSecondsLeft}, this lets
+     * the spam task skip re-sending when the visible content hasn't changed.
+     */
+    private final Map<UUID, Boolean> rulesLastCanAct = new ConcurrentHashMap<>();
+
     public FlowManager(BLGPlugin plugin) {
         this.plugin = plugin;
     }
@@ -80,6 +95,9 @@ public class FlowManager {
         stopFlow(player);
         rulesShownAt.putIfAbsent(player.getUniqueId(), System.currentTimeMillis());
         rulesPage.putIfAbsent(player.getUniqueId(), 0);
+        // Reset tracking so the dialog is sent immediately on the first tick
+        rulesLastSecondsLeft.put(player.getUniqueId(), -1);
+        rulesLastCanAct.put(player.getUniqueId(), false);
 
         int waitSeconds = plugin.getConfig().getInt("rules.wait-seconds", 15);
 
@@ -98,6 +116,18 @@ public class FlowManager {
             boolean canAct  = elapsed >= (long) waitSeconds * 1000L;
             int secondsLeft = canAct ? 0 : (int) Math.max(0, waitSeconds - elapsed / 1000L);
             int page        = rulesPage.getOrDefault(player.getUniqueId(), 0);
+
+            // Only re-send the dialog when its visible content has actually changed
+            // (countdown ticked down, or buttons just became active).  This lets
+            // players scroll the rules text freely between updates.
+            int  lastSec    = rulesLastSecondsLeft.getOrDefault(player.getUniqueId(), -1);
+            boolean lastAct = rulesLastCanAct.getOrDefault(player.getUniqueId(), false);
+            if (secondsLeft == lastSec && canAct == lastAct) {
+                return; // nothing changed – skip this tick
+            }
+
+            rulesLastSecondsLeft.put(player.getUniqueId(), secondsLeft);
+            rulesLastCanAct.put(player.getUniqueId(), canAct);
             plugin.getDialogManager().openRulesDialog(player, page, canAct, secondsLeft);
         }, SPAM_INTERVAL_TICKS, SPAM_INTERVAL_TICKS);
 
@@ -161,6 +191,8 @@ public class FlowManager {
         stopFlow(player);
         rulesShownAt.remove(player.getUniqueId());
         rulesPage.remove(player.getUniqueId());
+        rulesLastSecondsLeft.remove(player.getUniqueId());
+        rulesLastCanAct.remove(player.getUniqueId());
         pendingActions.remove(player.getUniqueId());
     }
 
@@ -183,6 +215,8 @@ public class FlowManager {
     /** Updates the rules page for this player (used by page-nav commands). */
     public void setRulesPage(Player player, int page) {
         rulesPage.put(player.getUniqueId(), page);
+        // Force the spam task to re-send the dialog immediately with the new page
+        rulesLastSecondsLeft.put(player.getUniqueId(), -1);
     }
 
     /** Returns the current rules page index (0-based) for this player. */
