@@ -2,9 +2,11 @@
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/auth/AuthMeHook.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/OpenAutoCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/OpenLoginCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/OpenPreLoginCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/OpenRegisterCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/ReloadCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/UpdateRulesCommand.java
-/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/ChoiceClickCommand.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/AutoChoiceCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/LoginChoiceCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/LoginSubmitCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/RegisterChoiceCommand.java
@@ -14,6 +16,7 @@
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/command/internal/RulesPageCommand.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/dialog/DialogManager.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/flow/FlowManager.java
+/home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/flow/PendingAction.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/listener/DialogResponseListener.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/listener/PlayerJoinListener.java
 /home/runner/work/BLG/BLG/src/main/java/io/github/faboit1/blg/listener/PlayerQuitListener.java

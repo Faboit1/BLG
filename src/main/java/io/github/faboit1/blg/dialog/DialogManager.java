@@ -270,11 +270,17 @@ public class DialogManager {
     /**
      * Opens the rules dialog for the given player.
      *
-     * @param page           0-based page index (ignored when pages are disabled)
-     * @param canAct         whether the player has waited long enough to accept/leave
-     * @param secondsLeft    seconds remaining in the mandatory wait (0 when canAct is true)
+     * <p>When {@code canAct} is {@code false} the Accept button is rendered as
+     * disabled (grayed out) using the Paper Dialog API's native
+     * {@code ActionButton.builder().disabled(true)} support.  The dialog is
+     * sent <em>once</em> in this state; a separate scheduled task in
+     * {@link io.github.faboit1.blg.flow.FlowManager} re-sends it with the
+     * button enabled after the configured wait time.
+     *
+     * @param page     0-based page index (ignored when pages are disabled)
+     * @param canAct   whether the player has waited long enough to accept/leave
      */
-    public void openRulesDialog(Player player, int page, boolean canAct, int secondsLeft) {
+    public void openRulesDialog(Player player, int page, boolean canAct) {
         boolean pagesEnabled = plugin.getConfig().getBoolean("rules.pages.enabled", false);
         int totalPages       = plugin.getFlowManager().getTotalPages();
         List<String> lines   = plugin.getFlowManager().getLinesForPage(page);
@@ -286,10 +292,8 @@ public class DialogManager {
         }
         String bodyText = sj.toString();
 
-        // Build title – show countdown when player must still wait
-        String titleTemplate = canAct
-                ? plugin.cfg("dialog.rules-title")
-                : plugin.cfg("dialog.rules-wait-title").replace("%seconds%", String.valueOf(secondsLeft));
+        // Title – always use the plain title; no countdown shown in the dialog
+        String titleTemplate = plugin.cfg("dialog.rules-title");
 
         // Build page label when pagination is active
         if (pagesEnabled && totalPages > 1) {
@@ -311,8 +315,16 @@ public class DialogManager {
             }
         }
 
-        // Accept button is always present; the server enforces the wait on the command side
-        mainButtons.add(new String[]{plugin.cfg("dialog.rules-accept-button"), "/blg_rules_accept"});
+        // Accept button: disabled (grayed out) until the mandatory wait has elapsed.
+        // btn[2] = "true" signals disabled; btn[3] carries the tooltip text.
+        String acceptLabel = plugin.cfg("dialog.rules-accept-button");
+        if (canAct) {
+            mainButtons.add(new String[]{acceptLabel, "/blg_rules_accept"});
+        } else {
+            String waitTooltip = plugin.cfg("dialog.rules-wait-button-tooltip");
+            mainButtons.add(new String[]{acceptLabel, "/blg_rules_accept", "true",
+                    waitTooltip != null ? waitTooltip : ""});
+        }
 
         String leaveLabel = plugin.cfg("dialog.rules-leave-button");
 
@@ -345,9 +357,21 @@ public class DialogManager {
      * Constructs a dialog that contains only action buttons (no text-input
      * fields) using Paper's Dialog API loaded via reflection.
      *
+     * <p>Each entry in {@code mainButtons} is a {@code String[]} with the
+     * following positional elements:
+     * <ol>
+     *   <li>Button label (legacy colour codes supported)</li>
+     *   <li>Command to run on click (may be {@code null} for no action)</li>
+     *   <li><em>Optional</em> – {@code "true"} to render the button as disabled
+     *       (grayed out) using {@code ActionButton.builder().disabled(true)}.
+     *       Omit or set to anything other than {@code "true"} for a normal button.</li>
+     *   <li><em>Optional</em> – Tooltip text shown on hover when the button is
+     *       disabled.  Ignored when the button is not disabled.  May be empty.</li>
+     * </ol>
+     *
      * @param title           dialog title (legacy colour codes supported)
      * @param bodyText        body text shown in the dialog (newlines supported)
-     * @param mainButtons     list of {@code [label, command]} pairs for the main button row
+     * @param mainButtons     list of button descriptors as described above
      * @param exitButtonLabel label for the exit/cancel button, or {@code null} for none
      * @param exitButtonCmd   command run by the exit button, or {@code null} for close-only
      */
@@ -386,14 +410,18 @@ public class DialogManager {
         // ----- Build main action buttons -----
         List<Object> actionBtnObjects = new ArrayList<>();
         for (String[] btn : mainButtons) {
-            String label = btn.length > 0 ? btn[0] : "";
-            String cmd   = btn.length > 1 ? btn[1] : null;
-            Object action = cmd != null
-                    ? buildClickAction(dialogActionClass, cmd)
-                    : null;
-            Object button = actionButtonClass
-                    .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                    .invoke(null, toComponent(label), null, SUBMIT_BUTTON_WIDTH, action);
+            String label       = btn.length > 0 ? btn[0] : "";
+            String cmd         = btn.length > 1 ? btn[1] : null;
+            boolean disabled   = btn.length > 2 && "true".equals(btn[2]);
+            String tooltipText = btn.length > 3 && !btn[3].isEmpty() ? btn[3] : null;
+            // Always build the action from the command.  When the button is disabled and the
+            // builder API is available the action won't fire (button is grayed out).  When the
+            // builder is unavailable the action is attached so the button still works; the
+            // server-side canActOnRules() check will silently reject premature acceptance.
+            Object action = cmd != null ? buildClickAction(dialogActionClass, cmd) : null;
+            Component tooltip = tooltipText != null ? toComponent(tooltipText) : null;
+            Object button = buildActionButton(actionButtonClass, dialogActionClass,
+                    toComponent(label), tooltip, SUBMIT_BUTTON_WIDTH, action, disabled);
             actionBtnObjects.add(button);
         }
 
@@ -576,6 +604,59 @@ public class DialogManager {
     private static Object call(Object obj, String method, Class<?> paramType, Object arg)
             throws Exception {
         return obj.getClass().getMethod(method, paramType).invoke(obj, arg);
+    }
+
+    /**
+     * Constructs an {@code ActionButton} via reflection, preferring the builder
+     * API ({@code ActionButton.builder(label)}) so that the {@code disabled}
+     * state (grayed-out button) can be set.  Falls back to the static
+     * {@code ActionButton.create(...)} factory on older Paper builds that do not
+     * expose a builder.
+     *
+     * <p>When {@code disabled} is {@code true} and the builder is not available
+     * the button is created with the provided action intact; the button will
+     * look enabled but the server-side {@code canActOnRules} check still
+     * prevents premature acceptance.
+     *
+     * @param actionButtonClass the {@code ActionButton} class loaded via reflection
+     * @param dialogActionClass the {@code DialogAction} class loaded via reflection
+     * @param label             button label component
+     * @param tooltip           tooltip component (may be {@code null})
+     * @param width             button width in pixels
+     * @param action            click action (may be {@code null} for no-op)
+     * @param disabled          whether to render the button as grayed out
+     */
+    private Object buildActionButton(Class<?> actionButtonClass, Class<?> dialogActionClass,
+                                     Component label, Component tooltip, int width,
+                                     Object action, boolean disabled) throws Exception {
+        // Preferred: builder API (Paper 1.21.5+) supports the disabled state.
+        // The action is attached even when disabled=true; a disabled button does
+        // not fire its action, so this is safe.
+        try {
+            Object builder = actionButtonClass.getMethod("builder", Component.class).invoke(null, label);
+            try { builder = call(builder, "width", int.class, width); }
+            catch (NoSuchMethodException ignored) {}
+            if (action != null) {
+                try { builder = call(builder, "action", dialogActionClass, action); }
+                catch (NoSuchMethodException ignored) {}
+            }
+            if (tooltip != null) {
+                try { builder = call(builder, "tooltip", Component.class, tooltip); }
+                catch (NoSuchMethodException ignored) {}
+            }
+            if (disabled) {
+                try { builder = call(builder, "disabled", boolean.class, true); }
+                catch (NoSuchMethodException ignored) {}
+            }
+            return builder.getClass().getMethod("build").invoke(builder);
+        } catch (NoSuchMethodException e) {
+            // Builder not available – fall back to the static create factory.
+            // The action is always attached so the button remains functional;
+            // server-side checks (e.g. canActOnRules) will reject premature clicks.
+            return actionButtonClass
+                    .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
+                    .invoke(null, label, tooltip, width, action);
+        }
     }
 
     /**
