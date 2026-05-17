@@ -27,13 +27,23 @@ public class DialogResponseListener implements Listener {
     /**
      * Intercepts command preprocessing so internal BLG commands from dialog
      * actions are not blocked by AuthMe before they reach command executors.
+     *
+     * <p>We neutralize the message (replace it with {@code "/"}) before
+     * cancelling so that AuthMe's own preprocess handler – which may run with
+     * {@code ignoreCancelled = false} at a higher priority – sees only a bare
+     * slash and does not send a "cannot run this command while unauthenticated"
+     * message.  The actual command is dispatched directly through
+     * {@code Server#dispatchCommand}, which bypasses the preprocess event.
      */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
         String message = event.getMessage();
         if (message.regionMatches(true, 0, INTERNAL_PREFIX, 0, INTERNAL_PREFIX.length())) {
-            event.setCancelled(true);
             String commandLine = message.startsWith("/") ? message.substring(1) : message;
+            // Neutralize the message before cancelling so other handlers (e.g. AuthMe)
+            // do not identify or block the internal command.
+            event.setMessage("/");
+            event.setCancelled(true);
             plugin.getServer().dispatchCommand(event.getPlayer(), commandLine);
         }
     }
