@@ -40,6 +40,12 @@ messages:
 # If AuthMe is installed and reports the player is already authenticated, no GUI is opened.
 autojoinlogingui: false
 
+# When true, players who authenticated with a Microsoft / Mojang premium account
+# (online-mode players) are detected automatically and the login/register GUI is
+# skipped for them.  Cracked / offline-mode players still go through the normal flow.
+# Only relevant when autojoinlogingui is enabled.
+skip-online-mode-players: true
+
 # Alias with kebab-case naming.
 auto-join-login-gui: false
 

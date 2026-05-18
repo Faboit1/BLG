@@ -47,6 +47,11 @@ public class PlayerJoinListener implements Listener {
             if (!player.isOnline()) {
                 return;
             }
+            // Skip the GUI for players authenticated via Microsoft / Mojang (online-mode).
+            if (plugin.getConfig().getBoolean("skip-online-mode-players", true)
+                    && player.isOnlineMode()) {
+                return;
+            }
             if (plugin.getAuthMeHook().isHooked()
                     && plugin.getAuthMeHook().isAuthenticated(player)) {
                 return;
