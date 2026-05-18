@@ -40,6 +40,21 @@ messages:
 # If AuthMe is installed and reports the player is already authenticated, no GUI is opened.
 autojoinlogingui: false
 
+# When true, players who authenticated with a Microsoft / Mojang premium account
+# (online-mode players) are detected automatically and the login/register GUI is
+# skipped for them.  Cracked / offline-mode players still go through the normal flow.
+# Only relevant when autojoinlogingui is enabled.
+skip-online-mode-players: true
+
+# When true, Bedrock players connected via Geyser / Floodgate are detected and
+# the login/register GUI is skipped for them.
+# Detection priority:
+#   1. Floodgate API (if the Floodgate plugin is installed)
+#   2. Fallback: player username contains a dot (.), which is the default
+#      Floodgate name prefix for Bedrock players.
+# Only relevant when autojoinlogingui is enabled.
+skip-bedrock-players: true
+
 # Alias with kebab-case naming.
 auto-join-login-gui: false
 

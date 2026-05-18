@@ -31,7 +31,10 @@ public class RulesLeaveCommand implements CommandExecutor {
         }
 
         if (!plugin.getFlowManager().canActOnRules(player)) {
-            // Not enough time has passed – silently reject
+            // Not enough time has passed – re-send the dialog immediately so the player
+            // is not left without a dialog until the unlock task fires.
+            int page = plugin.getFlowManager().getRulesPage(player);
+            plugin.getDialogManager().openRulesDialog(player, page, false);
             return true;
         }
 
