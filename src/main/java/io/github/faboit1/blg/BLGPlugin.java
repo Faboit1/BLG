@@ -1,6 +1,7 @@
 package io.github.faboit1.blg;
 
 import io.github.faboit1.blg.auth.AuthMeHook;
+import io.github.faboit1.blg.auth.GeyserHook;
 import io.github.faboit1.blg.command.OpenAutoCommand;
 import io.github.faboit1.blg.command.OpenLoginCommand;
 import io.github.faboit1.blg.command.OpenPreLoginCommand;
@@ -39,6 +40,7 @@ public class BLGPlugin extends JavaPlugin {
 
     private DialogManager dialogManager;
     private AuthMeHook    authMeHook;
+    private GeyserHook    geyserHook;
     private RulesManager  rulesManager;
     private FlowManager   flowManager;
 
@@ -51,6 +53,7 @@ public class BLGPlugin extends JavaPlugin {
         this.flowManager   = new FlowManager(this);
         this.dialogManager = new DialogManager(this);
         this.authMeHook    = new AuthMeHook(this);
+        this.geyserHook    = new GeyserHook(this);
 
         // Register commands
         registerCommand("openlogin",        new OpenLoginCommand(this));
@@ -91,6 +94,10 @@ public class BLGPlugin extends JavaPlugin {
 
     public AuthMeHook getAuthMeHook() {
         return authMeHook;
+    }
+
+    public GeyserHook getGeyserHook() {
+        return geyserHook;
     }
 
     public RulesManager getRulesManager() {

@@ -52,6 +52,11 @@ public class PlayerJoinListener implements Listener {
                     && player.isOnlineMode()) {
                 return;
             }
+            // Skip the GUI for Bedrock players (Geyser / Floodgate).
+            if (plugin.getConfig().getBoolean("skip-bedrock-players", true)
+                    && plugin.getGeyserHook().isBedrockPlayer(player)) {
+                return;
+            }
             if (plugin.getAuthMeHook().isHooked()
                     && plugin.getAuthMeHook().isAuthenticated(player)) {
                 return;
