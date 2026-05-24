@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FlowManager {
 
     /** How often (in ticks) to re-send the choice dialog.  2 ticks ≈ 100 ms. */
-    private static final long SPAM_INTERVAL_TICKS = 2L;
+    private static final long DEFAULT_SPAM_INTERVAL_TICKS = 2L;
 
     /** Default number of rules lines shown per page when the page system is enabled. */
     private static final int DEFAULT_LINES_PER_PAGE = 10;
@@ -77,6 +77,9 @@ public class FlowManager {
      * Register and has not yet accepted the current rules version.
      */
     public void startFlow(Player player) {
+        if (plugin.isDebugMode()) {
+            plugin.getLogger().info("[DEBUG] startFlow for " + player.getName());
+        }
         stopFlow(player); // cancel any previous task first
         startChoiceStage(player);
     }
@@ -98,6 +101,11 @@ public class FlowManager {
         int waitSeconds = plugin.getConfig().getInt("rules.wait-seconds", 15);
         int page        = rulesPage.getOrDefault(player.getUniqueId(), 0);
         boolean canAct  = (waitSeconds <= 0);
+
+        if (plugin.isDebugMode()) {
+            plugin.getLogger().info("[DEBUG] startRulesStage for " + player.getName()
+                    + " | page=" + page + " | waitSeconds=" + waitSeconds + " | canAct=" + canAct);
+        }
 
         // Send dialog once – Accept button is disabled until the wait elapses
         plugin.getDialogManager().openRulesDialog(player, page, canAct);
@@ -127,16 +135,32 @@ public class FlowManager {
         if (timeoutTicks < 1L) {
             timeoutTicks = 160L;
         }
+        long spamIntervalTicks = plugin.getConfig().getLong("join-choice-spam-interval-ticks",
+                DEFAULT_SPAM_INTERVAL_TICKS);
+        if (spamIntervalTicks < 1L) {
+            spamIntervalTicks = DEFAULT_SPAM_INTERVAL_TICKS;
+        }
         long timeoutMillis = timeoutTicks * 50L;
         long shownAt = System.currentTimeMillis();
         boolean authMeHooked = plugin.getAuthMeHook().isHooked();
 
+        if (plugin.isDebugMode()) {
+            plugin.getLogger().info("[DEBUG] startChoiceStage for " + player.getName()
+                    + " | timeoutTicks=" + timeoutTicks
+                    + " | spamIntervalTicks=" + spamIntervalTicks
+                    + " | authMeHooked=" + authMeHooked);
+        }
+
+        final long finalSpamIntervalTicks = spamIntervalTicks;
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             if (!player.isOnline()) {
                 stopFlow(player);
                 return;
             }
             if (System.currentTimeMillis() - shownAt >= timeoutMillis) {
+                if (plugin.isDebugMode()) {
+                    plugin.getLogger().info("[DEBUG] Choice dialog timed out for " + player.getName());
+                }
                 stopFlow(player);
                 return;
             }
@@ -147,7 +171,7 @@ public class FlowManager {
             } else {
                 plugin.getDialogManager().openLoginChoiceDialog(player);
             }
-        }, SPAM_INTERVAL_TICKS, SPAM_INTERVAL_TICKS);
+        }, finalSpamIntervalTicks, finalSpamIntervalTicks);
 
         spamTasks.put(player.getUniqueId(), task);
     }

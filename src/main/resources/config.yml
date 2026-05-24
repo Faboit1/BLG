@@ -1,16 +1,100 @@
-# BetterLoginGui configuration
+# ============================================================
+#  BetterLoginGui – Full Configuration
+#  Every feature, button, message and timing is customizable.
+# ============================================================
 
+# ---------------------------------------------------------------------------
+# Debug mode
+# When true, extra diagnostic information is written to the console.
+# Helpful for troubleshooting Velocity setups, dialog API issues, etc.
+# ---------------------------------------------------------------------------
+debug: false
+
+# ---------------------------------------------------------------------------
+# Velocity / proxy backend support
+#
+# Set this to true when this Paper server is running BEHIND a Velocity (or
+# BungeeCord) proxy.  Without this, the plugin may detect forwarded premium
+# players as "online-mode" and skip the GUI for them entirely.
+#
+# What this option does when true:
+#   - Disables the isOnlineMode() player check (which is unreliable on
+#     proxy-backend servers and can cause the GUI to never show).
+#   - Uses a longer default join delay to account for proxy handoff latency.
+#
+# No Velocity-side plugin is needed.  Install this plugin on the Paper
+# backend only.
+# ---------------------------------------------------------------------------
+velocity-backend: false
+
+# ---------------------------------------------------------------------------
+# Auto-open settings
+# ---------------------------------------------------------------------------
+
+# Automatically open the login/register dialog when a player joins.
+# If AuthMe is installed and reports the player is already authenticated, no
+# GUI is opened.
+autojoinlogingui: false
+
+# Alias – kept for compatibility.
+auto-join-login-gui: false
+
+# Legacy alias – kept for backwards compatibility with older configs.
+auto-open-on-join: false
+
+# When true, players who authenticated with a Microsoft / Mojang premium
+# account (online-mode players) are detected and the GUI is skipped for them.
+# Cracked / offline-mode players still go through the normal flow.
+# NOTE: On Velocity backends this detection is unreliable – set
+# velocity-backend: true to disable this check automatically.
+# Only relevant when autojoinlogingui is enabled.
+skip-online-mode-players: true
+
+# When true, Bedrock players connected via Geyser / Floodgate are detected
+# and the GUI is skipped for them.
+# Detection priority:
+#   1. Floodgate API (if the Floodgate plugin is installed)
+#   2. Fallback: player username contains a dot (.), which is the default
+#      Floodgate name prefix for Bedrock players.
+# Only relevant when autojoinlogingui is enabled.
+skip-bedrock-players: true
+
+# ---------------------------------------------------------------------------
+# Timing settings
+# ---------------------------------------------------------------------------
+
+# How many ticks to wait after a player joins before opening the first dialog.
+# Increase this if players see the dialog during the loading screen, or if you
+# are running behind a Velocity proxy (proxy hand-off adds latency).
+# Default: 20 ticks = 1 second.  Velocity recommended: 40–60 ticks.
+join-dialog-delay-ticks: 20
+
+# How long (ticks) to keep re-sending the on-join choice dialog before giving
+# up.  Default: 160 ticks = 8 seconds.
+join-choice-timeout-ticks: 160
+
+# How often (ticks) to re-send the choice dialog during the spam stage.
+# Lower = more responsive; higher = less network traffic.
+# Default: 2 ticks ≈ 100 ms.
+join-choice-spam-interval-ticks: 2
+
+# ---------------------------------------------------------------------------
+# Messages
+# All messages support legacy colour codes via &
+# ---------------------------------------------------------------------------
 messages:
-  # Prefix for all plugin messages
+  # Prefix prepended to every plugin message.
   prefix: "&8[&bBLG&8] &r"
 
-  # Shown to the player before opening a dialog (dialogs require a screen interaction first)
+  # Shown as a chat fallback when the Dialog API is unavailable on the server.
   login-prompt: "&7Please enter your credentials in the dialog."
   register-prompt: "&7Please fill in the registration dialog."
   auto-prompt: "&7Opening the appropriate dialog for you..."
 
-  # Shown when AuthMe is not available and /openauto is used
+  # Shown when AuthMe is not available and /openauto is used.
   authme-unavailable: "&cAuthMe integration is unavailable. Using login dialog by default."
+
+  # Usage / error messages for admin commands.
   openauto-usage: "&cUsage: /openauto or /openauto <player> &7(requires permission for other players)"
   openauto-console-usage: "&cConsole must use /openauto <player>."
   openprelogin-usage: "&cUsage: /openprelogin or /openprelogin <player> &7(requires permission for other players)"
@@ -21,109 +105,92 @@ messages:
   force-opened-login: "&aOpened the login dialog for &e%player%&a."
   force-opened-prelogin: "&aOpened the pre-login dialog for &e%player%&a."
 
-  # Shown if an internal command is called outside of a dialog context
+  # Shown if an internal /blg_* command is called outside a dialog context.
   internal-command-blocked: "&cThis command can only be used through the login/register dialog."
 
-  # Shown when an internal submit command fires correctly
+  # Shown when an internal submit command fires correctly.
   login-forwarded: "&aForwarding your login to AuthMe..."
   register-forwarded: "&aForwarding your registration to AuthMe..."
 
-  # Shown when register passwords do not match
+  # Shown when register passwords do not match.
   password-mismatch: "&cPasswords do not match. Please try again."
   login-failed: "&cLogin failed. Please try again."
   register-failed: "&cRegistration failed. Please try again."
 
-  # Shown as the kick message when a player leaves via the rules "Leave Server" button
+  # Shown as the kick reason when a player leaves via the rules "Leave Server" button.
   rules-leave-kick: "&cYou must accept the server rules to play."
 
-# Automatically open the login/register dialog when a player joins.
-# If AuthMe is installed and reports the player is already authenticated, no GUI is opened.
-autojoinlogingui: false
+  # Chat fallback – shown as a footer when rules are printed to chat (no Dialog API).
+  rules-chat-fallback-footer: "&7Type &a/blg_rules_accept &7to accept or &c/blg_rules_leave &7to leave."
 
-# When true, players who authenticated with a Microsoft / Mojang premium account
-# (online-mode players) are detected automatically and the login/register GUI is
-# skipped for them.  Cracked / offline-mode players still go through the normal flow.
-# Only relevant when autojoinlogingui is enabled.
-skip-online-mode-players: true
-
-# When true, Bedrock players connected via Geyser / Floodgate are detected and
-# the login/register GUI is skipped for them.
-# Detection priority:
-#   1. Floodgate API (if the Floodgate plugin is installed)
-#   2. Fallback: player username contains a dot (.), which is the default
-#      Floodgate name prefix for Bedrock players.
-# Only relevant when autojoinlogingui is enabled.
-skip-bedrock-players: true
-
-# Alias with kebab-case naming.
-auto-join-login-gui: false
-
-# Legacy alias kept for backwards compatibility with older configs.
-auto-open-on-join: false
-
-# How many ticks to wait after a player joins before opening the first dialog.
-# Increase this if players see the dialog during the loading screen.
-# Default: 20 ticks = 1 second.
-join-dialog-delay-ticks: 20
-
-# How long to keep re-sending the on-join choice dialog before stopping.
-# Default: 160 ticks = 8 seconds.
-join-choice-timeout-ticks: 160
-
+# ---------------------------------------------------------------------------
+# Dialog content & appearance
+# All text supports legacy colour codes via &
+# ---------------------------------------------------------------------------
 dialog:
-  # All dialog text below supports legacy color codes via &
-
-  # --- Unified on-join choice dialog (shown when autojoinlogingui is enabled) ---
+  # ---- Unified on-join choice dialog ----------------------------------------
+  # Shown repeatedly (spam stage) when autojoinlogingui is enabled.
   join-choice-title: "&lWelcome!"
   join-choice-body: "&7Click the button below to continue."
   join-choice-button: "&aRegister/Login"
 
-  # --- Login-stub dialog (shown to registered players before the actual login form) ---
+  # ---- Login-stub dialog (registered players) --------------------------------
+  # Shown before the actual login form; one click opens the password input.
   login-choice-title: "&lWelcome back!"
   login-choice-body: "&7Click the button below to log in to the server."
   login-choice-button: "&aOPEN LOGIN"
 
-  # --- Register-stub dialog (shown to new players before the actual register form) ---
+  # ---- Register-stub dialog (new players) ------------------------------------
+  # Shown before the actual register form; one click opens the form.
   register-choice-title: "&lWelcome!"
   register-choice-body: "&7It looks like you don't have an account yet.\n&7Click the button below to create one."
   register-choice-button: "&aOPEN REGISTER"
 
-  # --- Login dialog ---
+  # ---- Login dialog ----------------------------------------------------------
   login-title: "&lLogin"
-  register-title: "&lRegister"
-
-  # Body text displayed inside each dialog
   login-body: "&7Enter your password to log in to the server."
-  register-body: "&7Choose a password to create your account.\n&7Enter the same password twice to confirm."
-
-  # Button labels
   login-button: "&aLogin"
+
+  # ---- Register dialog -------------------------------------------------------
+  register-title: "&lRegister"
+  register-body: "&7Choose a password to create your account.\n&7Enter the same password twice to confirm."
   register-button: "&aRegister"
+
+  # ---- Shared button labels --------------------------------------------------
   cancel-button: "&cCancel"
 
-  # Input field labels
+  # ---- Input field labels ----------------------------------------------------
   password-label: "&fPassword"
   confirm-password-label: "&fConfirm Password"
 
-  # Hide password characters in login/register fields when supported by your
-  # Paper Dialog API build. On supporting builds this also enables the client
-  # show/hide control for the password field.
+  # Maximum number of characters allowed in password / text input fields.
+  max-input-length: 100
+
+  # Hide password characters in login/register fields.
+  # Requires a Paper build that exposes a masking method in the Dialog API.
   password-masking-enabled: true
 
-  # --- Rules dialog ---
-  # Shown in the dialog title bar while players read the rules.
+  # ---- Button widths (pixels) ------------------------------------------------
+  # Adjust these to change how buttons look in the dialog UI.
+  submit-button-width: 200
+  cancel-button-width: 100
+  nav-button-width: 100
+
+  # ---- Rules dialog ----------------------------------------------------------
   rules-title: "&6&lServer Rules"
   rules-accept-button: "&aAccept"
   rules-leave-button: "&cLeave Server"
   rules-prev-button: "&7< Previous"
   rules-next-button: "&7Next >"
-  # Tooltip shown on the grayed-out Accept button while the player must still
-  # wait.  Set to an empty string to show no tooltip.
+  # Tooltip shown on the grayed-out Accept button while the player still waits.
+  # Set to an empty string to show no tooltip.
   rules-wait-button-tooltip: "&ePlease read the rules before accepting."
 
+# ---------------------------------------------------------------------------
 # Rules system
+# ---------------------------------------------------------------------------
 rules:
-  # Set to true to enable the rules screen on join (shown before the choice dialog)
+  # Set to true to enable the rules screen on join (shown before the choice dialog).
   enabled: false
 
   # How many seconds the player must spend on the rules screen before they can
@@ -131,9 +198,8 @@ rules:
   wait-seconds: 15
 
   # Page system for long rule sets.
-  # If the Dialog API supports scrolling natively the page system is not needed;
-  # enable it if your rules are too long to display in a single dialog.
+  # Enable if your rules are too long to fit in a single dialog screen.
   pages:
     enabled: false
-    # How many rules lines to show per page when pages are enabled.
+    # How many rule lines to show per page when pages are enabled.
     lines-per-page: 10

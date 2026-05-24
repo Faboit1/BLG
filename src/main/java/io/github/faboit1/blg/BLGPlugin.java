@@ -76,6 +76,22 @@ public class BLGPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
 
+        if (isDebugMode()) {
+            getLogger().info("[DEBUG] Debug mode is ON.");
+            getLogger().info("[DEBUG] velocity-backend = " + getConfig().getBoolean("velocity-backend", false));
+            getLogger().info("[DEBUG] autojoinlogingui  = " + getConfig().getBoolean("autojoinlogingui",
+                    getConfig().getBoolean("auto-join-login-gui",
+                            getConfig().getBoolean("auto-open-on-join", false))));
+            getLogger().info("[DEBUG] skip-online-mode-players = "
+                    + getConfig().getBoolean("skip-online-mode-players", true));
+            getLogger().info("[DEBUG] join-dialog-delay-ticks  = "
+                    + getConfig().getLong("join-dialog-delay-ticks", 20L));
+            getLogger().info("[DEBUG] join-choice-timeout-ticks = "
+                    + getConfig().getLong("join-choice-timeout-ticks", 160L));
+            getLogger().info("[DEBUG] join-choice-spam-interval-ticks = "
+                    + getConfig().getLong("join-choice-spam-interval-ticks", 2L));
+        }
+
         getLogger().info("BetterLoginGui enabled – dialog UI layer over AuthMe.");
     }
 
@@ -123,6 +139,13 @@ public class BLGPlugin extends JavaPlugin {
             return;
         }
         cmd.setExecutor(executor);
+    }
+
+    /**
+     * Returns {@code true} when debug mode is enabled in config.
+     */
+    public boolean isDebugMode() {
+        return getConfig().getBoolean("debug", false);
     }
 
     /**
