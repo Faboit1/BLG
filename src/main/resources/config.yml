@@ -46,12 +46,18 @@ auto-open-on-join: false
 # When true, players who authenticated with a Microsoft / Mojang premium
 # account (online-mode players) are detected and the GUI is skipped for them.
 # Cracked / offline-mode players still go through the normal flow.
-# NOTE: This check is automatically disabled on offline-mode servers (which is
-# the standard setup for Velocity / BungeeCord backends) because per-player
-# online-mode detection is unreliable there.  On a true online-mode server
-# (no proxy) this setting works as described above.
+#
+# IMPORTANT: This is DISABLED by default because it is only useful on
+# standalone cracked (offline-mode) servers that also allow premium logins.
+#   - On online-mode servers every player is premium, so enabling this would
+#     prevent the dialog from ever opening.
+#   - On Velocity / BungeeCord backends the per-player online-mode flag is
+#     unreliable and may silently skip cracked players.
+#
+# Only enable this if you run a standalone offline-mode server and want to
+# skip the dialog for premium players who already authenticated via Mojang.
 # Only relevant when autojoinlogingui is enabled.
-skip-online-mode-players: true
+skip-online-mode-players: false
 
 # When true, Bedrock players connected via Geyser / Floodgate are detected
 # and the GUI is skipped for them.

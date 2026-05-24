@@ -84,7 +84,7 @@ public class BLGPlugin extends JavaPlugin {
                     getConfig().getBoolean("auto-join-login-gui",
                             getConfig().getBoolean("auto-open-on-join", false))));
             getLogger().info("[DEBUG] skip-online-mode-players = "
-                    + getConfig().getBoolean("skip-online-mode-players", true));
+                    + getConfig().getBoolean("skip-online-mode-players", false));
             getLogger().info("[DEBUG] join-dialog-delay-ticks  = "
                     + getConfig().getLong("join-dialog-delay-ticks", 20L));
             getLogger().info("[DEBUG] join-choice-timeout-ticks = "

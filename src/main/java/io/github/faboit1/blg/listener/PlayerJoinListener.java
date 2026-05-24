@@ -25,16 +25,17 @@ import org.bukkit.event.player.PlayerJoinEvent;
  *
  * <p><strong>Proxy / Velocity support:</strong> When this server is running
  * behind a Velocity (or BungeeCord) proxy the backend is almost always
- * configured in offline-mode ({@code server.getOnlineMode() == false}).  In
- * that case per-player online-mode detection via {@code Player#isOnlineMode()}
- * is automatically disabled – every player still goes through the normal dialog
- * flow regardless of their Mojang account status, because authentication is
- * handled by AuthMe on the backend.  No {@code velocity-backend: true} config
- * flag or separate Velocity-side plugin is required.
+ * configured in offline-mode ({@code server.getOnlineMode() == false}).  The
+ * per-player online-mode check ({@code skip-online-mode-players}) is disabled
+ * by default, so no special configuration is needed – the dialog flow works
+ * out of the box on all server types (standalone, proxy backend, online-mode,
+ * offline-mode).  No {@code velocity-backend: true} config flag or separate
+ * Velocity-side plugin is required.
  *
- * <p>If the server is in true online-mode (no proxy) the per-player check is
- * still applied so that premium players are skipped when
- * {@code skip-online-mode-players: true} (the default).
+ * <p>Even if an admin explicitly enables {@code skip-online-mode-players},
+ * the check is guarded by both the {@code velocity-backend} flag and
+ * {@link org.bukkit.Server#getOnlineMode()} so it can only fire on standalone
+ * offline-mode servers where the per-player detection is actually reliable.
  */
 public class PlayerJoinListener implements Listener {
 
@@ -76,25 +77,26 @@ public class PlayerJoinListener implements Listener {
                 return;
             }
 
-            // Per-player online-mode detection is only reliable when the server itself
-            // is running in online-mode (no proxy).  When the server is in offline-mode
-            // (the typical setup for Velocity / BungeeCord backends) every forwarded
-            // player may appear as online-mode even if they use a cracked account, which
-            // would silently skip the GUI for all players.
+            // Per-player online-mode detection (Player#isOnlineMode) is only
+            // meaningful on offline-mode (cracked) standalone servers where a mix
+            // of premium and cracked players can join.  On online-mode servers
+            // every player is premium by definition, so skipping them all would
+            // prevent the dialog from ever opening.  On Velocity/BungeeCord
+            // backends the per-player flag is unreliable (proxy-forwarded premium
+            // players appear as online-mode even on offline-mode backends).
             //
-            // Auto-detection: if the server is NOT in online-mode we know we are either
-            // on a plain offline-mode server or a proxy backend.  In both cases AuthMe
-            // is responsible for authentication, so all players must go through the
-            // dialog flow.  The per-player check is therefore skipped automatically –
-            // no velocity-backend: true flag or separate Velocity plugin needed.
-            //
-            // The explicit velocity-backend: true flag still works as an override for
-            // the rare edge-case where an admin wants to force-disable the check on an
-            // online-mode server as well.
+            // This check is therefore DISABLED by default (skip-online-mode-players: false).
+            // Admins on standalone cracked servers who want to skip premium players
+            // can enable it manually.  The velocity-backend flag and server
+            // online-mode auto-detection act as additional safety guards:
+            //   - velocity-backend: true → always skip the check
+            //   - server in online-mode  → always skip the check (skipping
+            //     everyone on an online-mode server is never useful)
+            //   - server in offline-mode → honour the config setting
             boolean serverOnlineMode = plugin.getServer().getOnlineMode();
             if (!velocityBackend
-                    && serverOnlineMode
-                    && plugin.getConfig().getBoolean("skip-online-mode-players", true)
+                    && !serverOnlineMode
+                    && plugin.getConfig().getBoolean("skip-online-mode-players", false)
                     && isOnlineMode(player)) {
                 if (plugin.isDebugMode()) {
                     plugin.getLogger().info("[DEBUG] Skipping flow for " + player.getName()
@@ -142,11 +144,11 @@ public class PlayerJoinListener implements Listener {
      * that provide the method.  If the method is absent, {@code false} is
      * returned (i.e. the GUI is shown – the safe default for cracked servers).
      *
-     * <p><strong>Note:</strong> This method is only consulted when the server
-     * itself is running in online-mode ({@code server.getOnlineMode() == true})
-     * and neither {@code velocity-backend: true} is set.  On offline-mode
-     * backends (the standard Velocity / BungeeCord setup) the per-player check
-     * is bypassed automatically so that the dialog is shown to every player.
+     * <p><strong>Note:</strong> This method is only consulted when
+     * {@code skip-online-mode-players} is explicitly set to {@code true} by the
+     * admin <em>and</em> the server is running in offline-mode (standalone
+     * cracked servers).  The check is bypassed on online-mode servers and
+     * on Velocity / BungeeCord backends.
      */
     private boolean isOnlineMode(Player player) {
         try {
