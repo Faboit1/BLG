@@ -13,17 +13,18 @@ debug: false
 # ---------------------------------------------------------------------------
 # Velocity / proxy backend support
 #
-# Set this to true when this Paper server is running BEHIND a Velocity (or
-# BungeeCord) proxy.  Without this, the plugin may detect forwarded premium
-# players as "online-mode" and skip the GUI for them entirely.
+# BLG auto-detects proxy mode: when this Paper server is running in
+# offline-mode (server.properties online-mode=false), the per-player
+# online-mode check is disabled automatically.  This covers the typical
+# Velocity / BungeeCord backend setup with no extra configuration needed –
+# you do NOT need a separate Velocity-side plugin.
+#
+# Set velocity-backend: true only if your backend is in online-mode yet you
+# still want to skip the per-player online-mode check (very rare setup).
 #
 # What this option does when true:
-#   - Disables the isOnlineMode() player check (which is unreliable on
-#     proxy-backend servers and can cause the GUI to never show).
-#   - Uses a longer default join delay to account for proxy handoff latency.
-#
-# No Velocity-side plugin is needed.  Install this plugin on the Paper
-# backend only.
+#   - Forces the per-player isOnlineMode() check off regardless of the
+#     server's own online-mode setting (which auto-detection normally handles).
 # ---------------------------------------------------------------------------
 velocity-backend: false
 
@@ -45,8 +46,10 @@ auto-open-on-join: false
 # When true, players who authenticated with a Microsoft / Mojang premium
 # account (online-mode players) are detected and the GUI is skipped for them.
 # Cracked / offline-mode players still go through the normal flow.
-# NOTE: On Velocity backends this detection is unreliable – set
-# velocity-backend: true to disable this check automatically.
+# NOTE: This check is automatically disabled on offline-mode servers (which is
+# the standard setup for Velocity / BungeeCord backends) because per-player
+# online-mode detection is unreliable there.  On a true online-mode server
+# (no proxy) this setting works as described above.
 # Only relevant when autojoinlogingui is enabled.
 skip-online-mode-players: true
 
@@ -66,7 +69,7 @@ skip-bedrock-players: true
 # How many ticks to wait after a player joins before opening the first dialog.
 # Increase this if players see the dialog during the loading screen, or if you
 # are running behind a Velocity proxy (proxy hand-off adds latency).
-# Default: 20 ticks = 1 second.  Velocity recommended: 40–60 ticks.
+# Default: 20 ticks = 1 second.  Proxy / Velocity recommended: 40–60 ticks.
 join-dialog-delay-ticks: 20
 
 # How long (ticks) to keep re-sending the on-join choice dialog before giving

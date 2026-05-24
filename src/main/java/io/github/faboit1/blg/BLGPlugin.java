@@ -78,6 +78,7 @@ public class BLGPlugin extends JavaPlugin {
 
         if (isDebugMode()) {
             getLogger().info("[DEBUG] Debug mode is ON.");
+            getLogger().info("[DEBUG] server online-mode  = " + getServer().getOnlineMode());
             getLogger().info("[DEBUG] velocity-backend = " + getConfig().getBoolean("velocity-backend", false));
             getLogger().info("[DEBUG] autojoinlogingui  = " + getConfig().getBoolean("autojoinlogingui",
                     getConfig().getBoolean("auto-join-login-gui",
