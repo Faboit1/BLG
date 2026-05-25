@@ -133,6 +133,27 @@ public class BLGPlugin extends JavaPlugin {
         return flowManager;
     }
 
+    /**
+     * Reloads runtime state similarly to plugin startup:
+     * <ul>
+     *   <li>Regenerates missing default config and merges new default keys</li>
+     *   <li>Regenerates missing {@code rules.txt} and reloads rules content</li>
+     *   <li>Re-hooks external integrations that are initialised at boot</li>
+     * </ul>
+     */
+    public void reloadPluginState() {
+        saveDefaultConfig();
+        reloadConfig();
+        getConfig().options().copyDefaults(true);
+        saveConfig();
+
+        rulesManager.ensureRulesFileExists();
+        rulesManager.reloadRules();
+
+        authMeHook = new AuthMeHook(this);
+        geyserHook = new GeyserHook(this);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

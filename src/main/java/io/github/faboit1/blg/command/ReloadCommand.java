@@ -26,8 +26,7 @@ public class ReloadCommand implements CommandExecutor {
             return true;
         }
 
-        plugin.reloadConfig();
-        plugin.getRulesManager().reloadRules();
+        plugin.reloadPluginState();
 
         sender.sendMessage(plugin.cfg("messages.prefix")
                 + "§aBetterLoginGui configuration reloaded.");
