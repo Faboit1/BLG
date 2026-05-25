@@ -135,6 +135,36 @@ public class PlayerJoinListener implements Listener {
                 return;
             }
 
+            // Check premium status via Mojang API when auto-authenticate-premium
+            // is enabled.  The check runs asynchronously so the server thread is
+            // not blocked.  Works correctly on Velocity / BungeeCord backends
+            // where Player.isOnlineMode() is unreliable.
+            boolean autoAuthPremium = plugin.getConfig().getBoolean("auto-authenticate-premium", false);
+            if (autoAuthPremium && plugin.getAuthMeHook().isHooked()) {
+                if (plugin.isDebugMode()) {
+                    plugin.getLogger().info("[DEBUG] Checking Mojang API for premium status of "
+                            + player.getName() + "...");
+                }
+                final boolean finalOpenBeforeIngame = openBeforeIngame;
+                plugin.getPremiumChecker().isPremiumAsync(player.getName(), isPremium -> {
+                    if (!player.isOnline()) return;
+                    if (isPremium) {
+                        if (plugin.isDebugMode()) {
+                            plugin.getLogger().info("[DEBUG] " + player.getName()
+                                    + " is a premium account – auto-authenticating via AuthMe forceLogin.");
+                        }
+                        plugin.getAuthMeHook().forceLogin(player);
+                    } else {
+                        if (plugin.isDebugMode()) {
+                            plugin.getLogger().info("[DEBUG] " + player.getName()
+                                    + " is NOT a premium account – starting normal flow.");
+                        }
+                        startLoginFlow(player, finalOpenBeforeIngame);
+                    }
+                });
+                return;
+            }
+
             if (plugin.isDebugMode()) {
                 plugin.getLogger().info("[DEBUG] Starting flow for " + player.getName()
                         + " | velocityBackend=" + velocityBackend
@@ -143,12 +173,19 @@ public class PlayerJoinListener implements Listener {
                         + " | openBeforeIngame=" + openBeforeIngame);
             }
 
-            if (openBeforeIngame) {
-                plugin.getFlowManager().startDirectFlow(player);
-            } else {
-                plugin.getFlowManager().startFlow(player);
-            }
+            startLoginFlow(player, openBeforeIngame);
         }, delayTicks);
+    }
+
+    /**
+     * Starts the appropriate login flow for the player (direct or choice-based).
+     */
+    private void startLoginFlow(Player player, boolean openBeforeIngame) {
+        if (openBeforeIngame) {
+            plugin.getFlowManager().startDirectFlow(player);
+        } else {
+            plugin.getFlowManager().startFlow(player);
+        }
     }
 
     /**

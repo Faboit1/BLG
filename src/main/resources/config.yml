@@ -76,6 +76,14 @@ skip-bedrock-players: true
 # Only relevant when autojoinlogingui is enabled.
 auto-authenticate-bedrock: false
 
+# When true, premium (paid) Minecraft accounts are detected by querying the
+# Mojang API and automatically authenticated through AuthMe's forceLogin API.
+# This is a reliable check that works correctly on Velocity / BungeeCord
+# backends where Player.isOnlineMode() may be unreliable.
+# Requires AuthMe to be installed. Cracked / non-premium players still see
+# the normal login or register dialog.
+auto-authenticate-premium: false
+
 # ---------------------------------------------------------------------------
 # Timing settings
 # ---------------------------------------------------------------------------

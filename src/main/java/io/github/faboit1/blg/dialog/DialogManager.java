@@ -112,7 +112,6 @@ public class DialogManager {
         String title   = plugin.cfg("dialog.login-title");
         String body    = withError(plugin.cfg("dialog.login-body"), errorMessage);
         String button  = plugin.cfg("dialog.login-button");
-        String cancel  = plugin.cfg("dialog.cancel-button");
         String pwLabel = plugin.cfg("dialog.password-label");
 
         // Build optional forgot-password button descriptor
@@ -130,7 +129,7 @@ public class DialogManager {
                         new boolean[]{true},
                         new String[]{pwLabel},
                         "/blg_login_submit $(password)",
-                        button, cancel,
+                        button, null,
                         extraButtons);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
@@ -164,7 +163,6 @@ public class DialogManager {
         String title        = plugin.cfg("dialog.register-title");
         String body         = withError(plugin.cfg("dialog.register-body"), errorMessage);
         String button       = plugin.cfg("dialog.register-button");
-        String cancel       = plugin.cfg("dialog.cancel-button");
         String pwLabel      = plugin.cfg("dialog.password-label");
         String confirmLabel = plugin.cfg("dialog.confirm-password-label");
 
@@ -176,7 +174,7 @@ public class DialogManager {
                         new boolean[]{true, true},
                         new String[]{pwLabel, confirmLabel},
                         "/blg_register_submit $(password) $(confirmPassword)",
-                        button, cancel);
+                        button, null);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -598,11 +596,6 @@ public class DialogManager {
                 .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
                 .invoke(null, toComponent(submitLabel), null, submitButtonWidth(), cmdAction);
 
-        // ----- Build cancel button (null action = just closes) -----
-        Object cancelBtn = actionButtonClass
-                .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                .invoke(null, toComponent(cancelLabel), null, cancelButtonWidth(), null);
-
         // ----- Build DialogType (multiAction) -----
         List<Object> actionButtons = new ArrayList<>();
         actionButtons.add(submitBtn);
@@ -622,9 +615,16 @@ public class DialogManager {
         Object typeBuilder = dialogTypeClass
                 .getMethod("multiAction", List.class)
                 .invoke(null, actionButtons);
-        typeBuilder = typeBuilder.getClass()
-                .getMethod("exitAction", actionButtonClass)
-                .invoke(typeBuilder, cancelBtn);
+
+        // ----- Build cancel/exit button only when a label is provided -----
+        if (cancelLabel != null && !cancelLabel.isEmpty()) {
+            Object cancelBtn = actionButtonClass
+                    .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
+                    .invoke(null, toComponent(cancelLabel), null, cancelButtonWidth(), null);
+            typeBuilder = typeBuilder.getClass()
+                    .getMethod("exitAction", actionButtonClass)
+                    .invoke(typeBuilder, cancelBtn);
+        }
         Object dialogType = typeBuilder.getClass().getMethod("build").invoke(typeBuilder);
 
         // ----- Create Dialog via InlinedRegistryBuilderProvider -----

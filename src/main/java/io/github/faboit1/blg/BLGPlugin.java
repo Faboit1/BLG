@@ -2,6 +2,7 @@ package io.github.faboit1.blg;
 
 import io.github.faboit1.blg.auth.AuthMeHook;
 import io.github.faboit1.blg.auth.GeyserHook;
+import io.github.faboit1.blg.auth.PremiumChecker;
 import io.github.faboit1.blg.command.OpenAutoCommand;
 import io.github.faboit1.blg.command.OpenLoginCommand;
 import io.github.faboit1.blg.command.OpenPreLoginCommand;
@@ -42,6 +43,7 @@ public class BLGPlugin extends JavaPlugin {
     private DialogManager dialogManager;
     private AuthMeHook    authMeHook;
     private GeyserHook    geyserHook;
+    private PremiumChecker premiumChecker;
     private RulesManager  rulesManager;
     private FlowManager   flowManager;
 
@@ -55,6 +57,7 @@ public class BLGPlugin extends JavaPlugin {
         this.dialogManager = new DialogManager(this);
         this.authMeHook    = new AuthMeHook(this);
         this.geyserHook    = new GeyserHook(this);
+        this.premiumChecker = new PremiumChecker(this);
 
         // Register commands
         registerCommand("openlogin",        new OpenLoginCommand(this));
@@ -97,6 +100,8 @@ public class BLGPlugin extends JavaPlugin {
                     + getConfig().getBoolean("open-before-ingame", false));
             getLogger().info("[DEBUG] auto-authenticate-bedrock = "
                     + getConfig().getBoolean("auto-authenticate-bedrock", false));
+            getLogger().info("[DEBUG] auto-authenticate-premium = "
+                    + getConfig().getBoolean("auto-authenticate-premium", false));
             getLogger().info("[DEBUG] forgot-password-enabled = "
                     + getConfig().getBoolean("dialog.forgot-password-enabled", true));
         }
@@ -123,6 +128,10 @@ public class BLGPlugin extends JavaPlugin {
 
     public GeyserHook getGeyserHook() {
         return geyserHook;
+    }
+
+    public PremiumChecker getPremiumChecker() {
+        return premiumChecker;
     }
 
     public RulesManager getRulesManager() {
@@ -152,6 +161,7 @@ public class BLGPlugin extends JavaPlugin {
 
         authMeHook = new AuthMeHook(this);
         geyserHook = new GeyserHook(this);
+        premiumChecker = new PremiumChecker(this);
     }
 
     // -------------------------------------------------------------------------
