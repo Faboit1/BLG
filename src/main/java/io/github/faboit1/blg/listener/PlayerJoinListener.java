@@ -47,6 +47,24 @@ public class PlayerJoinListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
+        var player = event.getPlayer();
+
+        // Kick players whose username contains a dot after the first character.
+        // Leading dots are allowed (Bedrock/Floodgate prefix). Bedrock players
+        // are always exempt from this check.
+        if (plugin.getConfig().getBoolean("kick-dot-usernames", true)) {
+            String name = player.getName();
+            if (name.indexOf('.') > 0 && !plugin.getGeyserHook().isBedrockPlayer(player)) {
+                String reason = plugin.cfg("messages.kick-dot-username-reason");
+                if (plugin.isDebugMode()) {
+                    plugin.getLogger().info("[DEBUG] Kicking " + name
+                            + " – username contains a dot at an illegal position.");
+                }
+                player.kickPlayer(reason);
+                return;
+            }
+        }
+
         boolean autoOpen = plugin.getConfig().getBoolean("autojoinlogingui",
                 plugin.getConfig().getBoolean("auto-join-login-gui",
                         plugin.getConfig().getBoolean("auto-open-on-join", false)));
@@ -60,7 +78,6 @@ public class PlayerJoinListener implements Listener {
             return;
         }
 
-        var player = event.getPlayer();
         boolean velocityBackend = plugin.getConfig().getBoolean("velocity-backend", false);
         boolean openBeforeIngame = plugin.getConfig().getBoolean("open-before-ingame", false);
 
