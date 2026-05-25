@@ -2,9 +2,13 @@ package io.github.faboit1.blg.auth;
 
 import fr.xephi.authme.api.v3.AuthMeApi;
 import io.github.faboit1.blg.BLGPlugin;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
 /**
@@ -20,6 +24,20 @@ import java.util.logging.Level;
  */
 public class AuthMeHook {
 
+    /**
+     * Commands that BLG needs to whitelist in AuthMe's allowed-commands list
+     * so that unauthenticated players can use dialog buttons without getting
+     * blocked by AuthMe's command restriction.
+     */
+    private static final List<String> BLG_COMMANDS = List.of(
+            "/blg_login_submit", "/blg_register_submit",
+            "/blg_login_choice", "/blg_register_choice",
+            "/blg_auto_choice", "/blg_rules_accept",
+            "/blg_rules_leave", "/blg_rules_page",
+            "/blg_forgot_password",
+            "/openlogin", "/openregister", "/openauto", "/openprelogin"
+    );
+
     private final BLGPlugin plugin;
 
     /**
@@ -27,6 +45,7 @@ public class AuthMeHook {
      */
     private AuthMeApi authMeApi;
     private boolean authenticatedMethodWarningLogged;
+    private boolean forceLoginWarningLogged;
 
     public AuthMeHook(BLGPlugin plugin) {
         this.plugin = plugin;
@@ -105,6 +124,51 @@ public class AuthMeHook {
     }
 
     /**
+     * Forces the given player into an authenticated state via AuthMe.
+     *
+     * <p>Tries {@code forceLogin(Player)} first; falls back to
+     * {@code forceLogin(String)} with the player's name.  Returns
+     * {@code true} if the call succeeded, {@code false} otherwise.
+     */
+    public boolean forceLogin(Player player) {
+        if (authMeApi == null) {
+            return false;
+        }
+        try {
+            // Try forceLogin(Player)
+            try {
+                authMeApi.getClass()
+                        .getMethod("forceLogin", Player.class)
+                        .invoke(authMeApi, player);
+                return true;
+            } catch (NoSuchMethodException ignored) {
+                // Fall through to name-based variant
+            }
+            // Try forceLogin(String) – some older AuthMe builds
+            try {
+                authMeApi.getClass()
+                        .getMethod("forceLogin", String.class)
+                        .invoke(authMeApi, player.getName());
+                return true;
+            } catch (NoSuchMethodException ignored) {
+                // Fall through
+            }
+
+            if (!forceLoginWarningLogged) {
+                forceLoginWarningLogged = true;
+                plugin.getLogger().warning(
+                        "AuthMe API does not expose a supported forceLogin method; "
+                                + "auto-authenticate-bedrock will not work.");
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "AuthMe forceLogin() threw an exception for "
+                            + player.getName() + ": " + e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
      * Returns {@code true} when the AuthMe plugin was found and hooked
      * successfully.
      */
@@ -130,6 +194,7 @@ public class AuthMeHook {
             if (provider != null) {
                 authMeApi = provider.getProvider();
                 plugin.getLogger().info("Hooked into AuthMe via ServicesManager.");
+                whitelistCommands();
                 return;
             }
         } catch (Exception e) {
@@ -142,6 +207,7 @@ public class AuthMeHook {
             authMeApi = AuthMeApi.getInstance();
             if (authMeApi != null) {
                 plugin.getLogger().info("Hooked into AuthMe via AuthMeApi.getInstance().");
+                whitelistCommands();
                 return;
             }
         } catch (Exception e) {
@@ -179,5 +245,52 @@ public class AuthMeHook {
         plugin.getLogger().log(Level.WARNING,
                 "AuthMe API does not expose a supported isAuthenticated method; "
                         + "autojoin login checks will treat players as unauthenticated.");
+    }
+
+    /**
+     * Attempts to add BLG commands to AuthMe's allowed-commands list so that
+     * unauthenticated players are not blocked from using dialog buttons.
+     *
+     * <p>This modifies AuthMe's in-memory config.  The change is best-effort:
+     * if AuthMe caches the allowed-commands list at startup, the modification
+     * may not take effect until AuthMe is reloaded.
+     */
+    private void whitelistCommands() {
+        Plugin authMePlugin = plugin.getServer().getPluginManager().getPlugin("AuthMe");
+        if (authMePlugin == null) {
+            return;
+        }
+        try {
+            FileConfiguration authMeConfig = authMePlugin.getConfig();
+            // AuthMe uses "settings.restrictions.allowCommands" in most versions
+            String path = "settings.restrictions.allowCommands";
+            if (!authMeConfig.contains(path)) {
+                // Some builds use kebab-case
+                path = "settings.restrictions.allow-commands";
+            }
+            if (!authMeConfig.contains(path)) {
+                if (plugin.isDebugMode()) {
+                    plugin.getLogger().info(
+                            "[DEBUG] AuthMe config does not contain allowCommands path – "
+                                    + "skipping automatic whitelisting.");
+                }
+                return;
+            }
+            List<String> allowed = new ArrayList<>(authMeConfig.getStringList(path));
+            boolean changed = false;
+            for (String cmd : BLG_COMMANDS) {
+                if (!allowed.contains(cmd)) {
+                    allowed.add(cmd);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                authMeConfig.set(path, allowed);
+                plugin.getLogger().info("Added BLG commands to AuthMe's allowed-commands list.");
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "Could not whitelist BLG commands in AuthMe config: " + e.getMessage(), e);
+        }
     }
 }

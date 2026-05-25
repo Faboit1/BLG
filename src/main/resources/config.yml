@@ -68,9 +68,23 @@ skip-online-mode-players: false
 # Only relevant when autojoinlogingui is enabled.
 skip-bedrock-players: true
 
+# When true, Bedrock players (detected via Geyser / Floodgate) are
+# automatically authenticated through AuthMe's forceLogin API on join.
+# Requires both AuthMe and the Floodgate API (or dot-in-name fallback).
+# This is different from skip-bedrock-players: skip-bedrock-players just
+# hides the dialog, while this option actually logs the player in.
+# Only relevant when autojoinlogingui is enabled.
+auto-authenticate-bedrock: false
+
 # ---------------------------------------------------------------------------
 # Timing settings
 # ---------------------------------------------------------------------------
+
+# When true, the dialog opens as soon as possible (1-tick delay) and skips
+# the choice dialog entirely – the actual login or register form is shown
+# directly.  The dialog appears during/right after the loading screen.
+# Overrides join-dialog-delay-ticks when enabled.
+open-before-ingame: false
 
 # How many ticks to wait after a player joins before opening the first dialog.
 # Increase this if players see the dialog during the loading screen, or if you
@@ -184,6 +198,15 @@ dialog:
   submit-button-width: 200
   cancel-button-width: 100
   nav-button-width: 100
+
+  # ---- Forgot Password button (login dialog only) ----------------------------
+  # When enabled, a "Forgot Password?" button appears on the login dialog.
+  # Clicking it opens a chat message with a clickable link to the configured
+  # URL.  If no URL is configured, the default Discord server link is used.
+  forgot-password-enabled: true
+  forgot-password-button: "&eForgot Password?"
+  forgot-password-url: "https://discord.gg/99dHhqSx4j"
+  forgot-password-body: "&7If you forgot your password, please open a ticket on our Discord server."
 
   # ---- Rules dialog ----------------------------------------------------------
   rules-title: "&6&lServer Rules"

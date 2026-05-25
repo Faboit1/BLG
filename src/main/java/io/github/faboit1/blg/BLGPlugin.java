@@ -9,6 +9,7 @@ import io.github.faboit1.blg.command.OpenRegisterCommand;
 import io.github.faboit1.blg.command.ReloadCommand;
 import io.github.faboit1.blg.command.UpdateRulesCommand;
 import io.github.faboit1.blg.command.internal.AutoChoiceCommand;
+import io.github.faboit1.blg.command.internal.ForgotPasswordCommand;
 import io.github.faboit1.blg.command.internal.LoginChoiceCommand;
 import io.github.faboit1.blg.command.internal.LoginSubmitCommand;
 import io.github.faboit1.blg.command.internal.RegisterChoiceCommand;
@@ -70,6 +71,7 @@ public class BLGPlugin extends JavaPlugin {
         registerCommand("blg_rules_accept",    new RulesAcceptCommand(this));
         registerCommand("blg_rules_leave",     new RulesLeaveCommand(this));
         registerCommand("blg_rules_page",      new RulesPageCommand(this));
+        registerCommand("blg_forgot_password", new ForgotPasswordCommand(this));
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new DialogResponseListener(this), this);
@@ -91,6 +93,12 @@ public class BLGPlugin extends JavaPlugin {
                     + getConfig().getLong("join-choice-timeout-ticks", 160L));
             getLogger().info("[DEBUG] join-choice-spam-interval-ticks = "
                     + getConfig().getLong("join-choice-spam-interval-ticks", 2L));
+            getLogger().info("[DEBUG] open-before-ingame = "
+                    + getConfig().getBoolean("open-before-ingame", false));
+            getLogger().info("[DEBUG] auto-authenticate-bedrock = "
+                    + getConfig().getBoolean("auto-authenticate-bedrock", false));
+            getLogger().info("[DEBUG] forgot-password-enabled = "
+                    + getConfig().getBoolean("dialog.forgot-password-enabled", true));
         }
 
         getLogger().info("BetterLoginGui enabled – dialog UI layer over AuthMe.");

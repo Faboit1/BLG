@@ -8,6 +8,7 @@
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/ReloadCommand.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/UpdateRulesCommand.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/internal/AutoChoiceCommand.java
+/tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/internal/ForgotPasswordCommand.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/internal/LoginChoiceCommand.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/internal/LoginSubmitCommand.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/internal/RegisterChoiceCommand.java

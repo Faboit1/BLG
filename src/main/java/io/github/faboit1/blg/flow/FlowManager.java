@@ -85,6 +85,19 @@ public class FlowManager {
     }
 
     /**
+     * Starts a direct login flow that skips the choice-dialog stage and opens
+     * the actual login or register dialog immediately.  Used when
+     * {@code open-before-ingame: true} is set in config.
+     */
+    public void startDirectFlow(Player player) {
+        if (plugin.isDebugMode()) {
+            plugin.getLogger().info("[DEBUG] startDirectFlow for " + player.getName());
+        }
+        stopFlow(player);
+        plugin.getDialogManager().openAutoAuthDialog(player);
+    }
+
+    /**
      * Begins the rules stage for a player.
      *
      * <p>The rules dialog is sent <em>once</em> immediately with the Accept

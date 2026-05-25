@@ -115,6 +115,13 @@ public class DialogManager {
         String cancel  = plugin.cfg("dialog.cancel-button");
         String pwLabel = plugin.cfg("dialog.password-label");
 
+        // Build optional forgot-password button descriptor
+        List<String[]> extraButtons = null;
+        if (plugin.getConfig().getBoolean("dialog.forgot-password-enabled", true)) {
+            String forgotLabel = plugin.cfg("dialog.forgot-password-button");
+            extraButtons = List.<String[]>of(new String[]{forgotLabel, "/blg_forgot_password"});
+        }
+
         if (dialogApiAvailable) {
             try {
                 Object dialog = buildDialog(
@@ -123,7 +130,8 @@ public class DialogManager {
                         new boolean[]{true},
                         new String[]{pwLabel},
                         "/blg_login_submit $(password)",
-                        button, cancel);
+                        button, cancel,
+                        extraButtons);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -511,6 +519,25 @@ public class DialogManager {
                                     String commandTemplate,
                                     String submitLabel, String cancelLabel)
             throws Exception {
+        return buildDialog(title, bodyText, inputKeys, passwordInputs, inputLabels,
+                commandTemplate, submitLabel, cancelLabel, null);
+    }
+
+    /**
+     * Constructs a dialog using Paper's Dialog API loaded entirely via
+     * reflection.  Accepts optional extra action buttons that are placed
+     * alongside the submit button in the {@code multiAction} list.
+     *
+     * @param extraButtons optional list of button descriptors: each entry is
+     *                     {@code [label, command]}.  May be {@code null}.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Object buildDialog(String title, String bodyText,
+                                   String[] inputKeys, boolean[] passwordInputs, String[] inputLabels,
+                                    String commandTemplate,
+                                    String submitLabel, String cancelLabel,
+                                    List<String[]> extraButtons)
+            throws Exception {
         if (inputKeys.length != inputLabels.length || inputKeys.length != passwordInputs.length) {
             throw new IllegalArgumentException(
                     "Input metadata length mismatch: keys=" + inputKeys.length
@@ -577,9 +604,24 @@ public class DialogManager {
                 .invoke(null, toComponent(cancelLabel), null, cancelButtonWidth(), null);
 
         // ----- Build DialogType (multiAction) -----
+        List<Object> actionButtons = new ArrayList<>();
+        actionButtons.add(submitBtn);
+
+        // Add optional extra buttons (e.g. "Forgot Password?")
+        if (extraButtons != null) {
+            for (String[] btn : extraButtons) {
+                String btnLabel = btn[0];
+                String btnCmd   = btn[1];
+                Object btnAction = buildClickAction(dialogActionClass, btnCmd);
+                Object extraBtn  = buildActionButton(actionButtonClass, dialogActionClass,
+                        toComponent(btnLabel), null, cancelButtonWidth(), btnAction, false);
+                actionButtons.add(extraBtn);
+            }
+        }
+
         Object typeBuilder = dialogTypeClass
                 .getMethod("multiAction", List.class)
-                .invoke(null, List.of(submitBtn));
+                .invoke(null, actionButtons);
         typeBuilder = typeBuilder.getClass()
                 .getMethod("exitAction", actionButtonClass)
                 .invoke(typeBuilder, cancelBtn);

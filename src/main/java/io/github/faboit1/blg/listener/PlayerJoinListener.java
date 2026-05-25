@@ -62,11 +62,15 @@ public class PlayerJoinListener implements Listener {
 
         var player = event.getPlayer();
         boolean velocityBackend = plugin.getConfig().getBoolean("velocity-backend", false);
+        boolean openBeforeIngame = plugin.getConfig().getBoolean("open-before-ingame", false);
 
         // Delay before opening the first dialog so the client finishes the loading screen.
+        // When open-before-ingame is enabled, we use a 1-tick delay and skip the choice
+        // stage to show the actual auth dialog as early as possible.
         // When behind a Velocity proxy the default delay may be insufficient; the admin can
         // raise join-dialog-delay-ticks in the config (recommended 40–60 for Velocity).
-        long delayTicks = plugin.getConfig().getLong("join-dialog-delay-ticks", 20L);
+        long delayTicks = openBeforeIngame ? 1L
+                : plugin.getConfig().getLong("join-dialog-delay-ticks", 20L);
 
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline()) {
@@ -107,7 +111,15 @@ public class PlayerJoinListener implements Listener {
 
             if (plugin.getConfig().getBoolean("skip-bedrock-players", true)
                     && plugin.getGeyserHook().isBedrockPlayer(player)) {
-                if (plugin.isDebugMode()) {
+                // Auto-authenticate Bedrock players if configured
+                if (plugin.getConfig().getBoolean("auto-authenticate-bedrock", false)
+                        && plugin.getAuthMeHook().isHooked()) {
+                    if (plugin.isDebugMode()) {
+                        plugin.getLogger().info("[DEBUG] Auto-authenticating Bedrock player "
+                                + player.getName() + " via AuthMe forceLogin.");
+                    }
+                    plugin.getAuthMeHook().forceLogin(player);
+                } else if (plugin.isDebugMode()) {
                     plugin.getLogger().info("[DEBUG] Skipping flow for " + player.getName()
                             + " – detected as Bedrock player.");
                 }
@@ -127,10 +139,15 @@ public class PlayerJoinListener implements Listener {
                 plugin.getLogger().info("[DEBUG] Starting flow for " + player.getName()
                         + " | velocityBackend=" + velocityBackend
                         + " | serverOnlineMode=" + serverOnlineMode
-                        + " | delayTicks=" + delayTicks);
+                        + " | delayTicks=" + delayTicks
+                        + " | openBeforeIngame=" + openBeforeIngame);
             }
 
-            plugin.getFlowManager().startFlow(player);
+            if (openBeforeIngame) {
+                plugin.getFlowManager().startDirectFlow(player);
+            } else {
+                plugin.getFlowManager().startFlow(player);
+            }
         }, delayTicks);
     }
 

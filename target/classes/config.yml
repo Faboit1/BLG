@@ -13,17 +13,18 @@ debug: false
 # ---------------------------------------------------------------------------
 # Velocity / proxy backend support
 #
-# Set this to true when this Paper server is running BEHIND a Velocity (or
-# BungeeCord) proxy.  Without this, the plugin may detect forwarded premium
-# players as "online-mode" and skip the GUI for them entirely.
+# BLG auto-detects proxy mode: when this Paper server is running in
+# offline-mode (server.properties online-mode=false), the per-player
+# online-mode check is disabled automatically.  This covers the typical
+# Velocity / BungeeCord backend setup with no extra configuration needed –
+# you do NOT need a separate Velocity-side plugin.
+#
+# Set velocity-backend: true only if your backend is in online-mode yet you
+# still want to skip the per-player online-mode check (very rare setup).
 #
 # What this option does when true:
-#   - Disables the isOnlineMode() player check (which is unreliable on
-#     proxy-backend servers and can cause the GUI to never show).
-#   - Uses a longer default join delay to account for proxy handoff latency.
-#
-# No Velocity-side plugin is needed.  Install this plugin on the Paper
-# backend only.
+#   - Forces the per-player isOnlineMode() check off regardless of the
+#     server's own online-mode setting (which auto-detection normally handles).
 # ---------------------------------------------------------------------------
 velocity-backend: false
 
@@ -45,10 +46,18 @@ auto-open-on-join: false
 # When true, players who authenticated with a Microsoft / Mojang premium
 # account (online-mode players) are detected and the GUI is skipped for them.
 # Cracked / offline-mode players still go through the normal flow.
-# NOTE: On Velocity backends this detection is unreliable – set
-# velocity-backend: true to disable this check automatically.
+#
+# IMPORTANT: This is DISABLED by default because it is only useful on
+# standalone cracked (offline-mode) servers that also allow premium logins.
+#   - On online-mode servers every player is premium, so enabling this would
+#     prevent the dialog from ever opening.
+#   - On Velocity / BungeeCord backends the per-player online-mode flag is
+#     unreliable and may silently skip cracked players.
+#
+# Only enable this if you run a standalone offline-mode server and want to
+# skip the dialog for premium players who already authenticated via Mojang.
 # Only relevant when autojoinlogingui is enabled.
-skip-online-mode-players: true
+skip-online-mode-players: false
 
 # When true, Bedrock players connected via Geyser / Floodgate are detected
 # and the GUI is skipped for them.
@@ -59,14 +68,28 @@ skip-online-mode-players: true
 # Only relevant when autojoinlogingui is enabled.
 skip-bedrock-players: true
 
+# When true, Bedrock players (detected via Geyser / Floodgate) are
+# automatically authenticated through AuthMe's forceLogin API on join.
+# Requires both AuthMe and the Floodgate API (or dot-in-name fallback).
+# This is different from skip-bedrock-players: skip-bedrock-players just
+# hides the dialog, while this option actually logs the player in.
+# Only relevant when autojoinlogingui is enabled.
+auto-authenticate-bedrock: false
+
 # ---------------------------------------------------------------------------
 # Timing settings
 # ---------------------------------------------------------------------------
 
+# When true, the dialog opens as soon as possible (1-tick delay) and skips
+# the choice dialog entirely – the actual login or register form is shown
+# directly.  The dialog appears during/right after the loading screen.
+# Overrides join-dialog-delay-ticks when enabled.
+open-before-ingame: false
+
 # How many ticks to wait after a player joins before opening the first dialog.
 # Increase this if players see the dialog during the loading screen, or if you
 # are running behind a Velocity proxy (proxy hand-off adds latency).
-# Default: 20 ticks = 1 second.  Velocity recommended: 40–60 ticks.
+# Default: 20 ticks = 1 second.  Proxy / Velocity recommended: 40–60 ticks.
 join-dialog-delay-ticks: 20
 
 # How long (ticks) to keep re-sending the on-join choice dialog before giving
@@ -175,6 +198,15 @@ dialog:
   submit-button-width: 200
   cancel-button-width: 100
   nav-button-width: 100
+
+  # ---- Forgot Password button (login dialog only) ----------------------------
+  # When enabled, a "Forgot Password?" button appears on the login dialog.
+  # Clicking it opens a chat message with a clickable link to the configured
+  # URL.  If no URL is configured, the default Discord server link is used.
+  forgot-password-enabled: true
+  forgot-password-button: "&eForgot Password?"
+  forgot-password-url: "https://discord.gg/99dHhqSx4j"
+  forgot-password-body: "&7If you forgot your password, please open a ticket on our Discord server."
 
   # ---- Rules dialog ----------------------------------------------------------
   rules-title: "&6&lServer Rules"

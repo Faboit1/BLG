@@ -68,6 +68,10 @@ commands:
     description: Internal – navigates to a specific rules page.
     usage: /blg_rules_page <page>
     permission: blg.internal
+  blg_forgot_password:
+    description: Internal – called by the forgot-password button; sends a clickable URL in chat.
+    usage: /blg_forgot_password
+    permission: blg.internal
 
 permissions:
   blg.openlogin:
