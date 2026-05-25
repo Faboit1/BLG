@@ -93,6 +93,14 @@ public class FlowManager {
         if (plugin.isDebugMode()) {
             plugin.getLogger().info("[DEBUG] startDirectFlow for " + player.getName());
         }
+        if (plugin.getAuthMeHook().isHooked()
+                && plugin.getAuthMeHook().isAuthenticated(player)) {
+            if (plugin.isDebugMode()) {
+                plugin.getLogger().info("[DEBUG] Skipping direct flow for " + player.getName()
+                        + " – already authenticated via AuthMe.");
+            }
+            return;
+        }
         stopFlow(player);
         plugin.getDialogManager().openAutoAuthDialog(player);
     }
@@ -167,6 +175,14 @@ public class FlowManager {
         final long finalSpamIntervalTicks = spamIntervalTicks;
         BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             if (!player.isOnline()) {
+                stopFlow(player);
+                return;
+            }
+            if (authMeHooked && plugin.getAuthMeHook().isAuthenticated(player)) {
+                if (plugin.isDebugMode()) {
+                    plugin.getLogger().info("[DEBUG] Stopping choice flow for " + player.getName()
+                            + " – player became authenticated via AuthMe.");
+                }
                 stopFlow(player);
                 return;
             }
