@@ -128,9 +128,18 @@ public class PlayerJoinListener implements Listener {
 
             if (plugin.getConfig().getBoolean("skip-bedrock-players", true)
                     && plugin.getGeyserHook().isBedrockPlayer(player)) {
-                // Auto-authenticate Bedrock players if configured
+                // Auto-authenticate (and auto-register if needed) Bedrock players
                 if (plugin.getConfig().getBoolean("auto-authenticate-bedrock", false)
                         && plugin.getAuthMeHook().isHooked()) {
+                    if (!plugin.getAuthMeHook().isRegistered(player)) {
+                        // Not registered yet – register with a random password then force-login
+                        String randomPassword = java.util.UUID.randomUUID().toString().replace("-", "");
+                        if (plugin.isDebugMode()) {
+                            plugin.getLogger().info("[DEBUG] Auto-registering Bedrock player "
+                                    + player.getName() + " with a random password.");
+                        }
+                        plugin.getAuthMeHook().forceRegister(player, randomPassword);
+                    }
                     if (plugin.isDebugMode()) {
                         plugin.getLogger().info("[DEBUG] Auto-authenticating Bedrock player "
                                 + player.getName() + " via AuthMe forceLogin.");

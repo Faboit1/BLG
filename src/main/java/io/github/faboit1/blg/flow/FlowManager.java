@@ -99,6 +99,7 @@ public class FlowManager {
                 plugin.getLogger().info("[DEBUG] Skipping direct flow for " + player.getName()
                         + " – already authenticated via AuthMe.");
             }
+            plugin.getDialogManager().closeActiveDialog(player);
             return;
         }
         stopFlow(player);
@@ -184,6 +185,7 @@ public class FlowManager {
                             + " – player became authenticated via AuthMe.");
                 }
                 stopFlow(player);
+                plugin.getDialogManager().closeActiveDialog(player);
                 return;
             }
             if (System.currentTimeMillis() - shownAt >= timeoutMillis) {

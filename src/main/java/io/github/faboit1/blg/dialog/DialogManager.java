@@ -294,6 +294,40 @@ public class DialogManager {
     }
 
     /**
+     * Attempts to close/dismiss any dialog currently shown to the player.
+     *
+     * <p>Paper 1.21.5 exposes {@code Player#clearActiveDialog()} (and possibly
+     * other names) for this purpose.  The call is performed reflectively so that
+     * the plugin still compiles and runs on builds that do not provide the method
+     * – on those builds the call is silently skipped.
+     *
+     * @param player the player whose dialog should be dismissed
+     */
+    public void closeActiveDialog(Player player) {
+        // Try known Paper method names in order of likelihood
+        for (String methodName : new String[]{"clearActiveDialog", "closeDialog", "clearDialog"}) {
+            try {
+                Player.class.getMethod(methodName).invoke(player);
+                if (plugin.isDebugMode()) {
+                    plugin.getLogger().info("[DEBUG] closeActiveDialog (" + methodName + ") → "
+                            + player.getName());
+                }
+                return;
+            } catch (NoSuchMethodException ignored) {
+                // Try next name
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.FINE,
+                        "closeActiveDialog/" + methodName + " failed for " + player.getName()
+                                + ": " + e.getMessage(), e);
+                return;
+            }
+        }
+        if (plugin.isDebugMode()) {
+            plugin.getLogger().info("[DEBUG] closeActiveDialog – no supported method found on this server build.");
+        }
+    }
+
+    /**
      * Opens the rules dialog for the given player.
      *
      * <p>When {@code canAct} is {@code false} the Accept button is rendered as

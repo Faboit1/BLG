@@ -124,6 +124,46 @@ public class AuthMeHook {
     }
 
     /**
+     * Registers the given player in AuthMe with the supplied password.
+     *
+     * <p>Tries {@code forceRegister(Player, String)} first; falls back to
+     * {@code forceRegister(String, String)} for older AuthMe builds.  Returns
+     * {@code true} if the call succeeded, {@code false} otherwise.
+     */
+    public boolean forceRegister(Player player, String password) {
+        if (authMeApi == null) {
+            return false;
+        }
+        try {
+            try {
+                authMeApi.getClass()
+                        .getMethod("forceRegister", Player.class, String.class)
+                        .invoke(authMeApi, player, password);
+                return true;
+            } catch (NoSuchMethodException ignored) {
+                // Fall through to name-based variant
+            }
+            try {
+                authMeApi.getClass()
+                        .getMethod("forceRegister", String.class, String.class)
+                        .invoke(authMeApi, player.getName(), password);
+                return true;
+            } catch (NoSuchMethodException ignored) {
+                // Fall through
+            }
+
+            plugin.getLogger().warning(
+                    "AuthMe API does not expose a supported forceRegister method; "
+                            + "auto-register-bedrock will not work.");
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "AuthMe forceRegister() threw an exception for "
+                            + player.getName() + ": " + e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
      * Forces the given player into an authenticated state via AuthMe.
      *
      * <p>Tries {@code forceLogin(Player)} first; falls back to

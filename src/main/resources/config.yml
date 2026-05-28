@@ -80,7 +80,10 @@ kick-dot-usernames: true
 skip-bedrock-players: true
 
 # When true, Bedrock players (detected via Geyser / Floodgate) are
-# automatically authenticated through AuthMe's forceLogin API on join.
+# automatically registered (if they have no account yet) and authenticated
+# through AuthMe's forceRegister / forceLogin API on join.
+# New Bedrock players are registered with a random password they will never
+# need to type; returning players are just force-logged in.
 # Requires both AuthMe and the Floodgate API (or dot-in-name fallback).
 # This is different from skip-bedrock-players: skip-bedrock-players just
 # hides the dialog, while this option actually logs the player in.
