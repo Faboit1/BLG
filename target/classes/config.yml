@@ -59,6 +59,17 @@ auto-open-on-join: false
 # Only relevant when autojoinlogingui is enabled.
 skip-online-mode-players: false
 
+# When true, players whose username contains a dot (.) at any position other
+# than the very first character are automatically kicked on join.
+# Examples:
+#   .username  → ALLOWED  (Bedrock / Floodgate prefix)
+#   username   → ALLOWED  (no dot)
+#   user.name  → KICKED
+#   username.  → KICKED
+# Bedrock players (detected via Floodgate API or dot-prefix fallback) are
+# always exempt from this check.
+kick-dot-usernames: true
+
 # When true, Bedrock players connected via Geyser / Floodgate are detected
 # and the GUI is skipped for them.
 # Detection priority:
@@ -69,12 +80,27 @@ skip-online-mode-players: false
 skip-bedrock-players: true
 
 # When true, Bedrock players (detected via Geyser / Floodgate) are
-# automatically authenticated through AuthMe's forceLogin API on join.
+# automatically registered (if they have no account yet) and authenticated
+# through AuthMe's forceRegister / forceLogin API on join.
+# New Bedrock players are registered with a random password they will never
+# need to type; returning players are just force-logged in.
 # Requires both AuthMe and the Floodgate API (or dot-in-name fallback).
 # This is different from skip-bedrock-players: skip-bedrock-players just
 # hides the dialog, while this option actually logs the player in.
 # Only relevant when autojoinlogingui is enabled.
 auto-authenticate-bedrock: false
+
+# When true, premium (paid) Minecraft accounts are detected by querying the
+# Mojang API and automatically authenticated through AuthMe's forceLogin API.
+# If the player has no AuthMe account yet they are silently auto-registered
+# with a random password (identical to the Bedrock auto-register flow) so
+# that forceLogin works on first join.  The login/register GUI is never
+# opened for premium players when this option is enabled.
+# This is a reliable check that works correctly on Velocity / BungeeCord
+# backends where Player.isOnlineMode() may be unreliable.
+# Requires AuthMe to be installed. Cracked / non-premium players still see
+# the normal login or register dialog.
+auto-authenticate-premium: false
 
 # ---------------------------------------------------------------------------
 # Timing settings
@@ -139,6 +165,10 @@ messages:
   password-mismatch: "&cPasswords do not match. Please try again."
   login-failed: "&cLogin failed. Please try again."
   register-failed: "&cRegistration failed. Please try again."
+
+  # Shown as the kick reason when a player is kicked for having a dot in their
+  # username at an illegal position (not the first character).
+  kick-dot-username-reason: "&cYour username contains a dot (.) which is not allowed.\n&7Please change your username and reconnect."
 
   # Shown as the kick reason when a player leaves via the rules "Leave Server" button.
   rules-leave-kick: "&cYou must accept the server rules to play."

@@ -1,6 +1,7 @@
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/BLGPlugin.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/auth/AuthMeHook.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/auth/GeyserHook.java
+/tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/auth/PremiumChecker.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/OpenAutoCommand.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/OpenLoginCommand.java
 /tmp/workspace/Faboit1/BLG/src/main/java/io/github/faboit1/blg/command/OpenPreLoginCommand.java

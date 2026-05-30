@@ -92,6 +92,10 @@ auto-authenticate-bedrock: false
 
 # When true, premium (paid) Minecraft accounts are detected by querying the
 # Mojang API and automatically authenticated through AuthMe's forceLogin API.
+# If the player has no AuthMe account yet they are silently auto-registered
+# with a random password (identical to the Bedrock auto-register flow) so
+# that forceLogin works on first join.  The login/register GUI is never
+# opened for premium players when this option is enabled.
 # This is a reliable check that works correctly on Velocity / BungeeCord
 # backends where Player.isOnlineMode() may be unreliable.
 # Requires AuthMe to be installed. Cracked / non-premium players still see

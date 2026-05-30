@@ -177,7 +177,17 @@ public class PlayerJoinListener implements Listener {
                     if (isPremium) {
                         if (plugin.isDebugMode()) {
                             plugin.getLogger().info("[DEBUG] " + player.getName()
-                                    + " is a premium account – auto-authenticating via AuthMe forceLogin.");
+                                    + " is a premium account – auto-authenticating via AuthMe.");
+                        }
+                        // Auto-register if the player has no AuthMe account yet,
+                        // so that forceLogin succeeds on first join.
+                        if (!plugin.getAuthMeHook().isRegistered(player)) {
+                            String randomPassword = java.util.UUID.randomUUID().toString().replace("-", "");
+                            if (plugin.isDebugMode()) {
+                                plugin.getLogger().info("[DEBUG] Auto-registering premium player "
+                                        + player.getName() + " with a random password.");
+                            }
+                            plugin.getAuthMeHook().forceRegister(player, randomPassword);
                         }
                         plugin.getAuthMeHook().forceLogin(player);
                     } else {

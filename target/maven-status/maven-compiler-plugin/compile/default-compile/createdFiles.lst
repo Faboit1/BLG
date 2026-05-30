@@ -20,6 +20,7 @@ io/github/faboit1/blg/auth/GeyserHook.class
 io/github/faboit1/blg/command/UpdateRulesCommand.class
 io/github/faboit1/blg/command/internal/LoginSubmitCommand.class
 io/github/faboit1/blg/command/internal/LoginChoiceCommand.class
+io/github/faboit1/blg/auth/PremiumChecker.class
 io/github/faboit1/blg/command/OpenRegisterCommand.class
 io/github/faboit1/blg/command/internal/RulesAcceptCommand.class
 io/github/faboit1/blg/command/internal/ForgotPasswordCommand.class

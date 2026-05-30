@@ -5,6 +5,8 @@ import io.github.faboit1.blg.BLGPlugin;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 
@@ -65,7 +67,8 @@ public class PremiumChecker {
     private boolean checkMojangApi(String username) {
         HttpURLConnection connection = null;
         try {
-            URI uri = URI.create(MOJANG_PROFILE_URL + username);
+            URI uri = URI.create(MOJANG_PROFILE_URL
+                    + URLEncoder.encode(username, StandardCharsets.UTF_8));
             connection = (HttpURLConnection) uri.toURL().openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(5000);
