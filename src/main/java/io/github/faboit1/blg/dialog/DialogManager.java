@@ -39,10 +39,10 @@ import java.util.logging.Level;
  */
 public class DialogManager {
 
-    private static final int SUBMIT_BUTTON_WIDTH = 200;
-    private static final int CANCEL_BUTTON_WIDTH = 100;
-    private static final int NAV_BUTTON_WIDTH    = 100;
-    private static final int MAX_INPUT_LENGTH = 100;
+    private static final int DEFAULT_SUBMIT_BUTTON_WIDTH = 200;
+    private static final int DEFAULT_CANCEL_BUTTON_WIDTH = 100;
+    private static final int DEFAULT_NAV_BUTTON_WIDTH    = 100;
+    private static final int DEFAULT_MAX_INPUT_LENGTH    = 100;
     // Attempt order: most likely names first based on Paper snapshots and
     // potential API naming variations exposed through reflection.
     private static final List<String> PASSWORD_MASKING_METHODS = Arrays.asList(
@@ -62,6 +62,14 @@ public class DialogManager {
     private final boolean dialogApiAvailable;
 
     /**
+     * The minimum client protocol version required to receive dialogs.
+     * Minecraft 1.21.5 has protocol version 770; dialogs are only sent to
+     * clients whose protocol version is strictly greater than this value
+     * (i.e. 1.21.6 and newer).
+     */
+    private static final int DIALOG_MIN_PROTOCOL = 770;
+
+    /**
      * Cached reference to {@code net.kyori.adventure.dialog.DialogLike}, loaded
      * lazily when the Dialog API is first confirmed available.  {@code null} if
      * the class is not on the classpath.
@@ -72,6 +80,26 @@ public class DialogManager {
     public DialogManager(BLGPlugin plugin) {
         this.plugin = plugin;
         this.dialogApiAvailable = probeDialogApi();
+    }
+
+    // -----------------------------------------------------------------------
+    // Config helpers
+    // -----------------------------------------------------------------------
+
+    private int submitButtonWidth() {
+        return plugin.getConfig().getInt("dialog.submit-button-width", DEFAULT_SUBMIT_BUTTON_WIDTH);
+    }
+
+    private int cancelButtonWidth() {
+        return plugin.getConfig().getInt("dialog.cancel-button-width", DEFAULT_CANCEL_BUTTON_WIDTH);
+    }
+
+    private int navButtonWidth() {
+        return plugin.getConfig().getInt("dialog.nav-button-width", DEFAULT_NAV_BUTTON_WIDTH);
+    }
+
+    private int maxInputLength() {
+        return plugin.getConfig().getInt("dialog.max-input-length", DEFAULT_MAX_INPUT_LENGTH);
     }
 
     // -----------------------------------------------------------------------
@@ -92,10 +120,16 @@ public class DialogManager {
         String title   = plugin.cfg("dialog.login-title");
         String body    = withError(plugin.cfg("dialog.login-body"), errorMessage);
         String button  = plugin.cfg("dialog.login-button");
-        String cancel  = plugin.cfg("dialog.cancel-button");
         String pwLabel = plugin.cfg("dialog.password-label");
 
-        if (dialogApiAvailable) {
+        // Build optional forgot-password button descriptor
+        List<String[]> extraButtons = null;
+        if (plugin.getConfig().getBoolean("dialog.forgot-password-enabled", true)) {
+            String forgotLabel = plugin.cfg("dialog.forgot-password-button");
+            extraButtons = List.<String[]>of(new String[]{forgotLabel, "/blg_forgot_password"});
+        }
+
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildDialog(
                         title, body,
@@ -103,7 +137,8 @@ public class DialogManager {
                         new boolean[]{true},
                         new String[]{pwLabel},
                         "/blg_login_submit $(password)",
-                        button, cancel);
+                        button, null,
+                        extraButtons);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -136,11 +171,10 @@ public class DialogManager {
         String title        = plugin.cfg("dialog.register-title");
         String body         = withError(plugin.cfg("dialog.register-body"), errorMessage);
         String button       = plugin.cfg("dialog.register-button");
-        String cancel       = plugin.cfg("dialog.cancel-button");
         String pwLabel      = plugin.cfg("dialog.password-label");
         String confirmLabel = plugin.cfg("dialog.confirm-password-label");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildDialog(
                         title, body,
@@ -148,7 +182,7 @@ public class DialogManager {
                         new boolean[]{true, true},
                         new String[]{pwLabel, confirmLabel},
                         "/blg_register_submit $(password) $(confirmPassword)",
-                        button, cancel);
+                        button, null);
                 showDialogReflective(player, dialog);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -179,7 +213,7 @@ public class DialogManager {
         String body   = plugin.cfg("dialog.login-choice-body");
         String button = plugin.cfg("dialog.login-choice-button");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
@@ -209,7 +243,7 @@ public class DialogManager {
         String body   = plugin.cfg("dialog.register-choice-body");
         String button = plugin.cfg("dialog.register-choice-button");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
@@ -238,7 +272,7 @@ public class DialogManager {
         String body   = plugin.cfg("dialog.join-choice-body");
         String button = plugin.cfg("dialog.join-choice-button");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
@@ -264,6 +298,40 @@ public class DialogManager {
             openRegisterDialog(player);
         } else {
             openLoginDialog(player);
+        }
+    }
+
+    /**
+     * Attempts to close/dismiss any dialog currently shown to the player.
+     *
+     * <p>Paper 1.21.5 exposes {@code Player#clearActiveDialog()} (and possibly
+     * other names) for this purpose.  The call is performed reflectively so that
+     * the plugin still compiles and runs on builds that do not provide the method
+     * – on those builds the call is silently skipped.
+     *
+     * @param player the player whose dialog should be dismissed
+     */
+    public void closeActiveDialog(Player player) {
+        // Try known Paper method names in order of likelihood
+        for (String methodName : new String[]{"clearActiveDialog", "closeDialog", "clearDialog"}) {
+            try {
+                Player.class.getMethod(methodName).invoke(player);
+                if (plugin.isDebugMode()) {
+                    plugin.getLogger().info("[DEBUG] closeActiveDialog (" + methodName + ") → "
+                            + player.getName());
+                }
+                return;
+            } catch (NoSuchMethodException ignored) {
+                // Try next name
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.FINE,
+                        "closeActiveDialog/" + methodName + " failed for " + player.getName()
+                                + ": " + e.getMessage(), e);
+                return;
+            }
+        }
+        if (plugin.isDebugMode()) {
+            plugin.getLogger().info("[DEBUG] closeActiveDialog – no supported method found on this server build.");
         }
     }
 
@@ -307,11 +375,13 @@ public class DialogManager {
         if (pagesEnabled && totalPages > 1) {
             if (page > 0) {
                 mainButtons.add(new String[]{plugin.cfg("dialog.rules-prev-button"),
-                        "/blg_rules_page " + (page - 1)});
+                        "/blg_rules_page " + (page - 1), null, null,
+                        String.valueOf(navButtonWidth())});
             }
             if (page < totalPages - 1) {
                 mainButtons.add(new String[]{plugin.cfg("dialog.rules-next-button"),
-                        "/blg_rules_page " + (page + 1)});
+                        "/blg_rules_page " + (page + 1), null, null,
+                        String.valueOf(navButtonWidth())});
             }
         }
 
@@ -328,7 +398,7 @@ public class DialogManager {
 
         String leaveLabel = plugin.cfg("dialog.rules-leave-button");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         titleTemplate, bodyText,
@@ -367,6 +437,9 @@ public class DialogManager {
      *       Omit or set to anything other than {@code "true"} for a normal button.</li>
      *   <li><em>Optional</em> – Tooltip text shown on hover when the button is
      *       disabled.  Ignored when the button is not disabled.  May be empty.</li>
+     *   <li><em>Optional</em> – Button width in pixels as a decimal string.
+     *       When absent or blank the configured {@code dialog.submit-button-width}
+     *       value is used.  Pass {@link #navButtonWidth()} for navigation buttons.</li>
      * </ol>
      *
      * @param title           dialog title (legacy colour codes supported)
@@ -413,7 +486,11 @@ public class DialogManager {
             String label       = btn.length > 0 ? btn[0] : "";
             String cmd         = btn.length > 1 ? btn[1] : null;
             boolean disabled   = btn.length > 2 && "true".equals(btn[2]);
-            String tooltipText = btn.length > 3 && !btn[3].isEmpty() ? btn[3] : null;
+            String tooltipText = btn.length > 3 && btn[3] != null && !btn[3].isEmpty() ? btn[3] : null;
+            int width = submitButtonWidth();
+            if (btn.length > 4 && btn[4] != null && !btn[4].isBlank()) {
+                try { width = Integer.parseInt(btn[4]); } catch (NumberFormatException ignored) {}
+            }
             // Always build the action from the command.  When the button is disabled and the
             // builder API is available the action won't fire (button is grayed out).  When the
             // builder is unavailable the action is attached so the button still works; the
@@ -421,7 +498,7 @@ public class DialogManager {
             Object action = cmd != null ? buildClickAction(dialogActionClass, cmd) : null;
             Component tooltip = tooltipText != null ? toComponent(tooltipText) : null;
             Object button = buildActionButton(actionButtonClass, dialogActionClass,
-                    toComponent(label), tooltip, SUBMIT_BUTTON_WIDTH, action, disabled);
+                    toComponent(label), tooltip, width, action, disabled);
             actionBtnObjects.add(button);
         }
 
@@ -436,7 +513,7 @@ public class DialogManager {
                     : null;
             Object exitBtn = actionButtonClass
                     .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                    .invoke(null, toComponent(exitButtonLabel), null, CANCEL_BUTTON_WIDTH, exitAction);
+                    .invoke(null, toComponent(exitButtonLabel), null, cancelButtonWidth(), exitAction);
             typeBuilder = typeBuilder.getClass()
                     .getMethod("exitAction", actionButtonClass)
                     .invoke(typeBuilder, exitBtn);
@@ -482,6 +559,25 @@ public class DialogManager {
                                     String commandTemplate,
                                     String submitLabel, String cancelLabel)
             throws Exception {
+        return buildDialog(title, bodyText, inputKeys, passwordInputs, inputLabels,
+                commandTemplate, submitLabel, cancelLabel, null);
+    }
+
+    /**
+     * Constructs a dialog using Paper's Dialog API loaded entirely via
+     * reflection.  Accepts optional extra action buttons that are placed
+     * alongside the submit button in the {@code multiAction} list.
+     *
+     * @param extraButtons optional list of button descriptors: each entry is
+     *                     {@code [label, command]}.  May be {@code null}.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Object buildDialog(String title, String bodyText,
+                                   String[] inputKeys, boolean[] passwordInputs, String[] inputLabels,
+                                    String commandTemplate,
+                                    String submitLabel, String cancelLabel,
+                                    List<String[]> extraButtons)
+            throws Exception {
         if (inputKeys.length != inputLabels.length || inputKeys.length != passwordInputs.length) {
             throw new IllegalArgumentException(
                     "Input metadata length mismatch: keys=" + inputKeys.length
@@ -524,7 +620,7 @@ public class DialogManager {
                     .getMethod("text", String.class, Component.class)
                     .invoke(null, inputKeys[i], toComponent(inputLabels[i]));
             inputBuilder = call(inputBuilder, "labelVisible", boolean.class, true);
-            inputBuilder = call(inputBuilder, "maxLength", int.class, MAX_INPUT_LENGTH);
+            inputBuilder = call(inputBuilder, "maxLength", int.class, maxInputLength());
             if (passwordMaskingEnabled && passwordInputs[i]) {
                 inputBuilder = applyPasswordMasking(inputBuilder);
             }
@@ -540,20 +636,37 @@ public class DialogManager {
                 .invoke(null, commandTemplate);
         Object submitBtn = actionButtonClass
                 .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                .invoke(null, toComponent(submitLabel), null, SUBMIT_BUTTON_WIDTH, cmdAction);
-
-        // ----- Build cancel button (null action = just closes) -----
-        Object cancelBtn = actionButtonClass
-                .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
-                .invoke(null, toComponent(cancelLabel), null, CANCEL_BUTTON_WIDTH, null);
+                .invoke(null, toComponent(submitLabel), null, submitButtonWidth(), cmdAction);
 
         // ----- Build DialogType (multiAction) -----
+        List<Object> actionButtons = new ArrayList<>();
+        actionButtons.add(submitBtn);
+
+        // Add optional extra buttons (e.g. "Forgot Password?")
+        if (extraButtons != null) {
+            for (String[] btn : extraButtons) {
+                String btnLabel = btn[0];
+                String btnCmd   = btn[1];
+                Object btnAction = buildClickAction(dialogActionClass, btnCmd);
+                Object extraBtn  = buildActionButton(actionButtonClass, dialogActionClass,
+                        toComponent(btnLabel), null, cancelButtonWidth(), btnAction, false);
+                actionButtons.add(extraBtn);
+            }
+        }
+
         Object typeBuilder = dialogTypeClass
                 .getMethod("multiAction", List.class)
-                .invoke(null, List.of(submitBtn));
-        typeBuilder = typeBuilder.getClass()
-                .getMethod("exitAction", actionButtonClass)
-                .invoke(typeBuilder, cancelBtn);
+                .invoke(null, actionButtons);
+
+        // ----- Build cancel/exit button only when a label is provided -----
+        if (cancelLabel != null && !cancelLabel.isEmpty()) {
+            Object cancelBtn = actionButtonClass
+                    .getMethod("create", Component.class, Component.class, int.class, dialogActionClass)
+                    .invoke(null, toComponent(cancelLabel), null, cancelButtonWidth(), null);
+            typeBuilder = typeBuilder.getClass()
+                    .getMethod("exitAction", actionButtonClass)
+                    .invoke(typeBuilder, cancelBtn);
+        }
         Object dialogType = typeBuilder.getClass().getMethod("build").invoke(typeBuilder);
 
         // ----- Create Dialog via InlinedRegistryBuilderProvider -----
@@ -593,7 +706,11 @@ public class DialogManager {
      * compile-time dependency on {@code net.kyori.adventure.dialog.DialogLike}.
      * The {@code DialogLike} class reference is cached after the first lookup.
      */
-    private static void showDialogReflective(Player player, Object dialog) throws Exception {
+    private void showDialogReflective(Player player, Object dialog) throws Exception {
+        if (plugin.isDebugMode()) {
+            plugin.getLogger().info("[DEBUG] showDialogReflective → " + player.getName()
+                    + " | dialogType=" + (dialog != null ? dialog.getClass().getSimpleName() : "null"));
+        }
         if (dialogLikeClass == null) {
             dialogLikeClass = Class.forName("net.kyori.adventure.dialog.DialogLike");
         }
@@ -738,6 +855,36 @@ public class DialogManager {
     // -----------------------------------------------------------------------
 
     /**
+     * Returns {@code true} if the player's client version supports the Dialog
+     * API (i.e. protocol version is strictly greater than
+     * {@link #DIALOG_MIN_PROTOCOL}, which corresponds to Minecraft 1.21.5).
+     *
+     * <p>The protocol version is read reflectively via
+     * {@code Player#getProtocolVersion()} so that the plugin compiles against
+     * any paper-api stub.  If the method is absent (very old Paper build) or
+     * the call fails, {@code false} is returned so the chat fallback is used –
+     * the safe default.
+     *
+     * @param player the player to check
+     * @return {@code true} only when the client is newer than 1.21.5
+     */
+    private boolean isClientDialogSupported(Player player) {
+        try {
+            Object result = player.getClass().getMethod("getProtocolVersion").invoke(player);
+            if (result instanceof Integer protocolVersion) {
+                return protocolVersion > DIALOG_MIN_PROTOCOL;
+            }
+        } catch (NoSuchMethodException ignored) {
+            // getProtocolVersion not available on this build – fall back
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.FINE,
+                    "Could not read protocol version for " + player.getName()
+                    + ": " + e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
      * Returns {@code true} if the Paper Dialog API is available at runtime.
      * We probe for the {@code Dialog} class in the paper-specific package.
      */
@@ -776,10 +923,6 @@ public class DialogManager {
     }
 
     /**
-     * Fallback when the Dialog API is unavailable and a player needs to go
-     * through the auth flow: directly open the appropriate auth dialog.
-     */
-    /**
      * Sends the rules as chat messages when the Dialog API is unavailable.
      * Called at most once per spam tick – the caller should stop spamming
      * after the fallback is shown.
@@ -791,6 +934,6 @@ public class DialogManager {
             player.sendMessage(line);
         }
         player.sendMessage(plugin.cfg("messages.prefix")
-                + "§7Type §a/blg_rules_accept §7to accept the rules or §c/blg_rules_leave §7to leave.");
+                + plugin.cfg("messages.rules-chat-fallback-footer"));
     }
 }

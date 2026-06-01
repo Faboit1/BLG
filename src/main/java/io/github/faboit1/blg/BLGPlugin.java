@@ -2,6 +2,7 @@ package io.github.faboit1.blg;
 
 import io.github.faboit1.blg.auth.AuthMeHook;
 import io.github.faboit1.blg.auth.GeyserHook;
+import io.github.faboit1.blg.auth.PremiumChecker;
 import io.github.faboit1.blg.command.OpenAutoCommand;
 import io.github.faboit1.blg.command.OpenLoginCommand;
 import io.github.faboit1.blg.command.OpenPreLoginCommand;
@@ -9,6 +10,7 @@ import io.github.faboit1.blg.command.OpenRegisterCommand;
 import io.github.faboit1.blg.command.ReloadCommand;
 import io.github.faboit1.blg.command.UpdateRulesCommand;
 import io.github.faboit1.blg.command.internal.AutoChoiceCommand;
+import io.github.faboit1.blg.command.internal.ForgotPasswordCommand;
 import io.github.faboit1.blg.command.internal.LoginChoiceCommand;
 import io.github.faboit1.blg.command.internal.LoginSubmitCommand;
 import io.github.faboit1.blg.command.internal.RegisterChoiceCommand;
@@ -41,6 +43,7 @@ public class BLGPlugin extends JavaPlugin {
     private DialogManager dialogManager;
     private AuthMeHook    authMeHook;
     private GeyserHook    geyserHook;
+    private PremiumChecker premiumChecker;
     private RulesManager  rulesManager;
     private FlowManager   flowManager;
 
@@ -54,6 +57,7 @@ public class BLGPlugin extends JavaPlugin {
         this.dialogManager = new DialogManager(this);
         this.authMeHook    = new AuthMeHook(this);
         this.geyserHook    = new GeyserHook(this);
+        this.premiumChecker = new PremiumChecker(this);
 
         // Register commands
         registerCommand("openlogin",        new OpenLoginCommand(this));
@@ -70,11 +74,37 @@ public class BLGPlugin extends JavaPlugin {
         registerCommand("blg_rules_accept",    new RulesAcceptCommand(this));
         registerCommand("blg_rules_leave",     new RulesLeaveCommand(this));
         registerCommand("blg_rules_page",      new RulesPageCommand(this));
+        registerCommand("blg_forgot_password", new ForgotPasswordCommand(this));
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new DialogResponseListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
+
+        if (isDebugMode()) {
+            getLogger().info("[DEBUG] Debug mode is ON.");
+            getLogger().info("[DEBUG] server online-mode  = " + getServer().getOnlineMode());
+            getLogger().info("[DEBUG] velocity-backend = " + getConfig().getBoolean("velocity-backend", false));
+            getLogger().info("[DEBUG] autojoinlogingui  = " + getConfig().getBoolean("autojoinlogingui",
+                    getConfig().getBoolean("auto-join-login-gui",
+                            getConfig().getBoolean("auto-open-on-join", false))));
+            getLogger().info("[DEBUG] skip-online-mode-players = "
+                    + getConfig().getBoolean("skip-online-mode-players", false));
+            getLogger().info("[DEBUG] join-dialog-delay-ticks  = "
+                    + getConfig().getLong("join-dialog-delay-ticks", 20L));
+            getLogger().info("[DEBUG] join-choice-timeout-ticks = "
+                    + getConfig().getLong("join-choice-timeout-ticks", 160L));
+            getLogger().info("[DEBUG] join-choice-spam-interval-ticks = "
+                    + getConfig().getLong("join-choice-spam-interval-ticks", 2L));
+            getLogger().info("[DEBUG] open-before-ingame = "
+                    + getConfig().getBoolean("open-before-ingame", false));
+            getLogger().info("[DEBUG] auto-authenticate-bedrock = "
+                    + getConfig().getBoolean("auto-authenticate-bedrock", false));
+            getLogger().info("[DEBUG] auto-authenticate-premium = "
+                    + getConfig().getBoolean("auto-authenticate-premium", false));
+            getLogger().info("[DEBUG] forgot-password-enabled = "
+                    + getConfig().getBoolean("dialog.forgot-password-enabled", true));
+        }
 
         getLogger().info("BetterLoginGui enabled – dialog UI layer over AuthMe.");
     }
@@ -100,12 +130,38 @@ public class BLGPlugin extends JavaPlugin {
         return geyserHook;
     }
 
+    public PremiumChecker getPremiumChecker() {
+        return premiumChecker;
+    }
+
     public RulesManager getRulesManager() {
         return rulesManager;
     }
 
     public FlowManager getFlowManager() {
         return flowManager;
+    }
+
+    /**
+     * Reloads runtime state similarly to plugin startup:
+     * <ul>
+     *   <li>Regenerates missing default config and merges new default keys</li>
+     *   <li>Regenerates missing {@code rules.txt} and reloads rules content</li>
+     *   <li>Re-hooks external integrations that are initialised at boot</li>
+     * </ul>
+     */
+    public void reloadPluginState() {
+        saveDefaultConfig();
+        reloadConfig();
+        getConfig().options().copyDefaults(true);
+        saveConfig();
+
+        rulesManager.ensureRulesFileExists();
+        rulesManager.reloadRules();
+
+        authMeHook = new AuthMeHook(this);
+        geyserHook = new GeyserHook(this);
+        premiumChecker = new PremiumChecker(this);
     }
 
     // -------------------------------------------------------------------------
@@ -123,6 +179,13 @@ public class BLGPlugin extends JavaPlugin {
             return;
         }
         cmd.setExecutor(executor);
+    }
+
+    /**
+     * Returns {@code true} when debug mode is enabled in config.
+     */
+    public boolean isDebugMode() {
+        return getConfig().getBoolean("debug", false);
     }
 
     /**

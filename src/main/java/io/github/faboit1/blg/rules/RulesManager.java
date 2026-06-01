@@ -47,11 +47,7 @@ public class RulesManager {
         plugin.getDataFolder().mkdirs();
         acceptedFile = new File(plugin.getDataFolder(), "accepted-rules.yml");
 
-        // Copy default rules.txt on first run
-        File rulesFile = new File(plugin.getDataFolder(), "rules.txt");
-        if (!rulesFile.exists()) {
-            plugin.saveResource("rules.txt", false);
-        }
+        ensureRulesFileExists();
 
         loadRulesFile();
         loadAccepted();
@@ -99,6 +95,17 @@ public class RulesManager {
             plugin.getLogger().info("Rules changed – all players will need to re-accept on next join.");
         }
         return changed;
+    }
+
+    /**
+     * Ensures {@code rules.txt} exists in the plugin data folder by copying the
+     * bundled default file when missing.
+     */
+    public void ensureRulesFileExists() {
+        File rulesFile = new File(plugin.getDataFolder(), "rules.txt");
+        if (!rulesFile.exists()) {
+            plugin.saveResource("rules.txt", false);
+        }
     }
 
     /**
