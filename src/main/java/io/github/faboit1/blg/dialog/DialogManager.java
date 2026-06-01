@@ -62,6 +62,14 @@ public class DialogManager {
     private final boolean dialogApiAvailable;
 
     /**
+     * The minimum client protocol version required to receive dialogs.
+     * Minecraft 1.21.5 has protocol version 770; dialogs are only sent to
+     * clients whose protocol version is strictly greater than this value
+     * (i.e. 1.21.6 and newer).
+     */
+    private static final int DIALOG_MIN_PROTOCOL = 770;
+
+    /**
      * Cached reference to {@code net.kyori.adventure.dialog.DialogLike}, loaded
      * lazily when the Dialog API is first confirmed available.  {@code null} if
      * the class is not on the classpath.
@@ -121,7 +129,7 @@ public class DialogManager {
             extraButtons = List.<String[]>of(new String[]{forgotLabel, "/blg_forgot_password"});
         }
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildDialog(
                         title, body,
@@ -166,7 +174,7 @@ public class DialogManager {
         String pwLabel      = plugin.cfg("dialog.password-label");
         String confirmLabel = plugin.cfg("dialog.confirm-password-label");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildDialog(
                         title, body,
@@ -205,7 +213,7 @@ public class DialogManager {
         String body   = plugin.cfg("dialog.login-choice-body");
         String button = plugin.cfg("dialog.login-choice-button");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
@@ -235,7 +243,7 @@ public class DialogManager {
         String body   = plugin.cfg("dialog.register-choice-body");
         String button = plugin.cfg("dialog.register-choice-button");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
@@ -264,7 +272,7 @@ public class DialogManager {
         String body   = plugin.cfg("dialog.join-choice-body");
         String button = plugin.cfg("dialog.join-choice-button");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         title, body,
@@ -390,7 +398,7 @@ public class DialogManager {
 
         String leaveLabel = plugin.cfg("dialog.rules-leave-button");
 
-        if (dialogApiAvailable) {
+        if (dialogApiAvailable && isClientDialogSupported(player)) {
             try {
                 Object dialog = buildButtonOnlyDialog(
                         titleTemplate, bodyText,
@@ -845,6 +853,36 @@ public class DialogManager {
     // -----------------------------------------------------------------------
     // Utilities
     // -----------------------------------------------------------------------
+
+    /**
+     * Returns {@code true} if the player's client version supports the Dialog
+     * API (i.e. protocol version is strictly greater than
+     * {@link #DIALOG_MIN_PROTOCOL}, which corresponds to Minecraft 1.21.5).
+     *
+     * <p>The protocol version is read reflectively via
+     * {@code Player#getProtocolVersion()} so that the plugin compiles against
+     * any paper-api stub.  If the method is absent (very old Paper build) or
+     * the call fails, {@code false} is returned so the chat fallback is used –
+     * the safe default.
+     *
+     * @param player the player to check
+     * @return {@code true} only when the client is newer than 1.21.5
+     */
+    private boolean isClientDialogSupported(Player player) {
+        try {
+            Object result = player.getClass().getMethod("getProtocolVersion").invoke(player);
+            if (result instanceof Integer protocolVersion) {
+                return protocolVersion > DIALOG_MIN_PROTOCOL;
+            }
+        } catch (NoSuchMethodException ignored) {
+            // getProtocolVersion not available on this build – fall back
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.FINE,
+                    "Could not read protocol version for " + player.getName()
+                    + ": " + e.getMessage(), e);
+        }
+        return false;
+    }
 
     /**
      * Returns {@code true} if the Paper Dialog API is available at runtime.
